@@ -31,6 +31,12 @@ jobs:
       - run: npm run build
         env:
           GH_PAGES: 'true'
+          # Chaves da sincronização. Se os secrets não existirem, chegam vazias
+          # e o app publicado roda em modo local — exatamente como antes, sem
+          # quebrar nada. O passo a passo para criá-las está em CONFIGURACAO.md.
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_VAPID_PUBLIC_KEY: ${{ secrets.VITE_VAPID_PUBLIC_KEY }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

@@ -255,22 +255,38 @@ Playwright não está no `package.json`; instale sob demanda com
 
 ---
 
-## Pendências reais (estado em que o projeto ficou)
-
-1. **O deploy não recebe as chaves do Supabase.** `deploy.yml` só passa
-   `GH_PAGES`, então o build publicado sai com `SYNC_CONFIGURADO = false` — no
-   site do Pages a sincronização está desligada, mesmo com todo o código pronto.
-   Falta adicionar `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` e
-   `VITE_VAPID_PUBLIC_KEY` como secrets do repo e repassá-los no `env:` do passo
-   de build.
-2. **`CONFIGURACAO.md` não existe.** A Edge Function `notificar` diz que o passo
-   a passo de configuração está nesse arquivo, na raiz. Ele precisa ser escrito
-   (criar projeto no Supabase, rodar `esquema.sql`, criar a conta única do
-   casal, gerar as chaves VAPID, publicar a função, ligar o Database Webhook).
-3. **Nada da sincronização/PWA foi testado num navegador de verdade ainda** —
-   nem conectar duas sessões, nem receber push. O build e o lint passam.
+## Estado da sincronização
 
 Chaves lidas no build (todas opcionais, em `.env` local ou secrets do Actions):
 `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_VAPID_PUBLIC_KEY`. A chave
 `anon` do Supabase é pública por projeto — quem protege os dados é o login do
-casal + as regras RLS.
+casal + as regras RLS. O `deploy.yml` já repassa as três; se os secrets não
+existirem, chegam vazias e o app publicado roda em modo local.
+
+O passo a passo para o usuário ligar tudo está em **`CONFIGURACAO.md`** (criar o
+projeto, rodar o `esquema.sql`, criar a conta única do casal, gerar VAPID com
+`node scripts/gerar-vapid.mjs`, publicar a Edge Function, ligar o webhook).
+
+### O que já foi verificado
+
+- **Modo local (sem chaves), no navegador:** adicionar missão, concluir
+  (as duas gravações do mesmo clique), recadinho, Painel refletindo sem
+  recarregar, persistência após reload, fila vazia, e os textos corretos em
+  Ajustes. Zero erro de console.
+- **Lógica de mescla, fora do navegador:** diferença item a item, lápide,
+  escrita local pendente vencendo versão antiga do servidor, versão mais nova
+  do servidor entrando, ordem idêntica nos dois aparelhos, XP ficando com o
+  maior (não o mais recente), união das conquistas, e `active` do perfil não
+  viajando entre aparelhos.
+
+### O que ainda não foi testado
+
+**Nada contra um Supabase real** — dois celulares conectados de verdade, tempo
+real chegando, e push no bolso. Depende de o usuário concluir o
+`CONFIGURACAO.md`. Se der problema, os pontos de inspeção estão na seção "Se
+algo não funcionar" daquele arquivo.
+
+> Os testes acima foram feitos com bancada temporária (Playwright sob demanda +
+> um bundle esbuild com `localStorage` de mentira) e removidos depois, seguindo
+> a convenção do repo. Não há suíte de testes permanente — vale propor uma
+> (vitest) se a lógica de mescla for mexida de novo.
