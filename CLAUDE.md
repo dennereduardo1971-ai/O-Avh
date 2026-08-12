@@ -19,11 +19,11 @@ npm run lint     # oxlint
 ```
 
 Stack: React 19 + TypeScript + Vite + **Tailwind v4** + React Router (HashRouter)
-+ Framer Motion + canvas-confetti.
++ Framer Motion + canvas-confetti + **@supabase/supabase-js**.
 
 O lint emite avisos `react(only-export-components)` em arquivos que exportam
-componente **e** constante (contexts, `Panel`, `MoodCheck`, `BreathingOrb`).
-São benignos e esperados — não "conserte" quebrando os arquivos.
+componente **e** constante (os quatro contexts, `Panel`, `MoodCheck`,
+`BreathingOrb`). São benignos e esperados — não "conserte" quebrando os arquivos.
 
 ---
 
@@ -35,12 +35,14 @@ São benignos e esperados — não "conserte" quebrando os arquivos.
 | Artifact (Claude) | `claude.ai/code/artifact/bb739a16-7aa6-4b77-8c3c-027364b5235f` | só ao republicar |
 
 **Pages** roda via `.github/workflows/deploy.yml`. O Pages já está habilitado no
-repo; nenhum passo manual é necessário.
+repo; nenhum passo manual é necessário. O usuário já confirmou que o link abre.
 
 **Artifact**: `node scripts/build-artifact.mjs` (após `npm run build`) gera
 `artifact.html`, um HTML único com JS/CSS inline. É gitignorado — é build, não
 fonte. Para atualizar o artifact existente, republique **com a mesma URL** acima,
-senão cria um artifact novo e o link antigo fica velho.
+senão cria um artifact novo e o link antigo fica velho. No artifact o service
+worker não registra (não existe `sw.js` num HTML único): sem offline e sem push,
+o resto funciona igual.
 
 ---
 
@@ -49,7 +51,8 @@ senão cria um artifact novo e o link antigo fica velho.
 ```
 src/
   index.css              tokens (@theme), classes .panel/.field/.hud-*, keyframes
-  App.tsx                providers + rotas
+  App.tsx                providers (Sync > Profile > Toast > Game) + rotas
+  env.d.ts               tipos das VITE_* (todas opcionais)
   components/
     Layout.tsx           shell: fundo, menu lateral, HUD, área de conteúdo
     AmbientBackground.tsx  auroras CSS + poeira estelar em canvas
@@ -60,12 +63,30 @@ src/
     ProfileContext       nomes dos dois + quem está usando agora (p1/p2)
     ToastContext         notificações animadas (xp | achievement | levelup)
     GameContext          XP, nível, streak, contadores, conquistas
+    SyncContext          sessão, estado da conexão, tempo real, push
   features/<área>/       uma pasta por área do app
+    settings/            SettingsPage + ConexaoPanel + NotificacoesPanel
   lib/
-    storage.ts           useLocalStorage + generateId
+    storage.ts           useLocalStorage + valorAtual/definirValorGlobal
     gameMath.ts          levelInfo/xpForLevel, todayISO/yesterdayISO
     achievements.ts      ACHIEVEMENTS, GameCounts, EMPTY_COUNTS
     confetti.ts          confettiPop (pequeno) / confettiBurst (grande)
+    pwa.ts               instalação no celular + registro do service worker
+    sync/
+      config.ts          lê as VITE_*, SYNC_CONFIGURADO, id do aparelho
+      areas.ts           adaptadores: valor guardado <-> lista de itens
+      fila.ts            fila de saída (offline + desempate por hora)
+      motor.ts           diferença, mescla, sincronização completa
+      hooks.ts           useSyncedArea / useSyncedDoc
+      gatilho.ts         ponte "mudou algo" entre telas e SyncContext
+      push.ts            assinar/desassinar notificação
+public/
+  manifest.webmanifest   PWA
+  sw.js                  cache offline + recebimento do push (não passa no Vite)
+  icone-*.png            ícones gerados por scripts/gerar-icones.mjs
+supabase/
+  esquema.sql            tabelas + RLS + triggers + realtime (colar no SQL Editor)
+  functions/notificar/   Edge Function que dispara o push (Deno)
 ```
 
 Rotas → pasta: `/` Painel · `/mensagens` Recadinhos · `/financas` Tesouro ·
@@ -78,16 +99,49 @@ O vocabulário é de jogo (Tesouro, Missões, Aventuras…). Mantenha ao criar t
 
 ## Dados
 
-Tudo em `localStorage`, **sem backend**. Nada sai do aparelho — isso é uma
-promessa feita ao usuário na tela de Ajustes; não introduza envio de dados sem
-pedir autorização explícita.
+**Local primeiro, sincronização opcional por cima.** O app funciona 100% sem
+backend; a sincronização é uma camada que só liga se houver chaves no build
+**e** o casal entrar numa conta. Sem isso, `SYNC_CONFIGURADO` é falso, nenhuma
+tela muda e nada sai do aparelho.
 
-Chaves: `casal:perfil` · `casal:game` · `casal:mensagens` · `casal:tarefas` ·
-`casal:financas` · `casal:lazer` · `casal:humor`.
+Chaves do localStorage: `casal:perfil` · `casal:game` · `casal:mensagens` ·
+`casal:tarefas` · `casal:financas` · `casal:lazer` · `casal:humor` ·
+`casal:fila` · `casal:fila-docs` · `casal:dispositivo`.
 
-**Consequência conhecida:** os dados são por dispositivo/navegador. O que um
-adiciona não aparece no aparelho do outro. O usuário sabe disso; sincronização
-entre os dois é o próximo passo natural, ainda não pedido.
+`storage.ts` mantém **um valor por chave em memória**, com ouvintes. Isso não é
+enfeite: antes cada `useLocalStorage` tinha a própria cópia e duas telas lendo a
+mesma chave não se falavam. É também o que deixa a sincronização empurrar dados
+recebidos direto para dentro das telas (`definirValorGlobal`) sem que as telas
+saibam que sync existe.
+
+### Como a sincronização foi desenhada (as decisões que importam)
+
+- **Item a item, nunca o bloco inteiro.** Se cada celular mandasse o array
+  completo de recadinhos, o último a salvar apagaria o que o outro escreveu.
+  `areas.ts` quebra cada área em itens com `id`; o humor (que é um mapa
+  dia→pessoa) é achatado em `"dia|pessoa"` pelo mesmo motivo.
+- **Ordenação determinística.** Todo critério de ordenação termina desempatando
+  pelo `id`, senão a mesma lista apareceria embaralhada em cada celular.
+- **Apagar vira lápide, não `delete`.** Sem a marca `removido` no servidor, o
+  outro celular reenviaria o item apagado na próxima sincronização e ele
+  voltaria do além.
+- **Fila de saída com hora local.** Resolve offline e desempate de uma vez: o
+  que está na fila e é mais novo sempre vence o que chega do servidor, senão uma
+  sincronização no meio do caminho desfaria o que você acabou de digitar.
+- **XP não usa "o mais recente vence".** Se os dois ganhassem XP ao mesmo tempo,
+  a última gravação zeraria o progresso do outro. `mesclarJogo` fica com o
+  **maior** de cada número (todos só crescem) e a **união** das conquistas.
+- **Do perfil só sobem os nomes.** `active` é "quem está com o celular na mão
+  agora" — sincronizar isso faria o app trocar de pessoa sozinho no outro
+  aparelho.
+- **A primeira sincronização sobe calada** (`silencioso: true`), senão conectar
+  pela primeira vez faria o celular da Sara apitar uma vez por recadinho antigo.
+- O envio é agrupado num respiro de 700ms — as telas avisam "mudou" a cada
+  tecla.
+
+No banco, `esquema.sql` cria `itens` / `estado` / `dispositivos`, liga **RLS**
+(cada conta só enxerga o próprio `casal_id`), põe um trigger que **ignora
+escrita mais antiga** que a linha atual, e adiciona as tabelas ao realtime.
 
 ---
 
@@ -101,7 +155,8 @@ Arcade 3 · respiração (a cada 3 ciclos) 6.
 Nível: `xpForLevel(n) = 100 + (n-1)*25`. 16 conquistas em `lib/achievements.ts`.
 
 **Ao adicionar um contador novo** em `GameCounts`, adicione-o também em
-`EMPTY_COUNTS` — ver a armadilha do NaN abaixo.
+`EMPTY_COUNTS` — ver a armadilha do NaN abaixo. `mesclarJogo` percorre as
+chaves de `EMPTY_COUNTS`, então o contador novo entra na mescla de graça.
 
 ---
 
@@ -125,6 +180,24 @@ recriar estilos.
 **Anti-estresse é requisito, não enfeite:** tudo que se toca responde (GameButton
 tem onda no ponto do clique), e `prefers-reduced-motion` é respeitado
 globalmente em `index.css` — não adicione animação que ignore isso.
+
+---
+
+## PWA e notificações
+
+- `manifest.webmanifest` + `sw.js` (em `public/`, copiados crus — nada ali pode
+  depender de bundler). O escopo do worker vem de `import.meta.env.BASE_URL`,
+  que já é `/` em dev e `/O-Avh/` no Pages; caminho fixo quebraria no Pages.
+- Navegação usa **rede primeiro, cache como reserva**, para o deploy novo
+  aparecer. Suba o `VERSAO` do `sw.js` para invalidar cache antigo.
+- **No iPhone o push só funciona com o app instalado** na tela de início — no
+  Safari em aba a API `Notification` nem existe. Por isso os Ajustes mandam
+  instalar antes de oferecer o botão. No Android há o evento
+  `beforeinstallprompt` e dá para abrir o diálogo nativo; no iPhone não existe
+  evento equivalente, só explicar "Compartilhar → Adicionar à Tela de Início".
+- O push é disparado por um Database Webhook → Edge Function `notificar`, que
+  não avisa o aparelho que originou a escrita (por isso o `dispositivo` na
+  linha) nem as marcadas como `silencioso`.
 
 ---
 
@@ -153,6 +226,11 @@ assets dão 404 e a página fica branca.
 **5. Plurais em português.** Já quebraram duas vezes (`2 missãoões`,
 `1 abertas`). Troque a palavra inteira, não concatene sufixo.
 
+**6. Fechar sobre o `valor` do render perde gravações.** Dois `set` no mesmo
+clique (comum ao concluir uma missão: muda a tarefa **e** dá XP) fariam o
+segundo sobrescrever o primeiro. `useSyncedArea` lê `valorAtual(chave)` na hora
+de gravar, em vez de usar o valor capturado no render.
+
 ---
 
 ## Testando no navegador (aprendido na marra)
@@ -160,7 +238,8 @@ assets dão 404 e a página fica branca.
 Playwright não está no `package.json`; instale sob demanda com
 `npm install -D playwright --no-save` e use
 `executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome'` com
-`--no-sandbox`. **Remova antes de commitar.**
+`--no-sandbox`. **Remova antes de commitar** (o mesmo vale para scripts
+`teste-*.mjs` de bancada — já houve uma limpeza desses).
 
 - **Mudar só o hash não recarrega o documento.** Ao semear `localStorage` e
   navegar para `/#/rota`, o app não remonta e sobrescreve o que você semeou.
@@ -170,13 +249,28 @@ Playwright não está no `package.json`; instale sob demanda com
   `artifact.html`, sirva **sem** `-s`.
 - Locators que dependem de estado (ex.: `[aria-label="Estourar bolha"]`)
   re-indexam a cada clique — o alvo "n" muda de identidade no meio do laço.
-- **Este sandbox bloqueia `github.io`** no proxy de rede. Não dá para verificar o
-  deploy daqui; confirme pelos logs do Actions e peça ao usuário para abrir.
+- **Este sandbox bloqueia `github.io`** e o blob de artifacts do Actions no proxy
+  de rede. Não dá para verificar o deploy daqui; confirme pelos logs do Actions
+  (`mcp__github__get_job_logs`) e peça ao usuário para abrir.
 
 ---
 
-## Próximos passos possíveis (nenhum pedido ainda)
+## Pendências reais (estado em que o projeto ficou)
 
-- Sincronizar dados entre os dois aparelhos (hoje é local por dispositivo).
-- Instalar como app no celular (PWA: manifest + service worker).
-- Ajustar intensidade das animações, se o usuário achar demais ou de menos.
+1. **O deploy não recebe as chaves do Supabase.** `deploy.yml` só passa
+   `GH_PAGES`, então o build publicado sai com `SYNC_CONFIGURADO = false` — no
+   site do Pages a sincronização está desligada, mesmo com todo o código pronto.
+   Falta adicionar `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` e
+   `VITE_VAPID_PUBLIC_KEY` como secrets do repo e repassá-los no `env:` do passo
+   de build.
+2. **`CONFIGURACAO.md` não existe.** A Edge Function `notificar` diz que o passo
+   a passo de configuração está nesse arquivo, na raiz. Ele precisa ser escrito
+   (criar projeto no Supabase, rodar `esquema.sql`, criar a conta única do
+   casal, gerar as chaves VAPID, publicar a função, ligar o Database Webhook).
+3. **Nada da sincronização/PWA foi testado num navegador de verdade ainda** —
+   nem conectar duas sessões, nem receber push. O build e o lint passam.
+
+Chaves lidas no build (todas opcionais, em `.env` local ou secrets do Actions):
+`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_VAPID_PUBLIC_KEY`. A chave
+`anon` do Supabase é pública por projeto — quem protege os dados é o login do
+casal + as regras RLS.
