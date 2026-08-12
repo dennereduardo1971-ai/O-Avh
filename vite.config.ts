@@ -6,6 +6,8 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   // No GitHub Pages o app fica em /<repo>/, não na raiz do domínio —
   // por isso o base condicional. Em dev e no build local continua "/".
-  base: process.env.GH_PAGES === 'true' ? '/o-avh/' : '/',
+  // O caminho é sensível a maiúsculas/minúsculas: precisa bater com o
+  // nome exato do repositório no GitHub ("O-Avh"), não "o-avh".
+  base: process.env.GH_PAGES === 'true' ? '/O-Avh/' : '/',
   plugins: [react(), tailwindcss()],
 })

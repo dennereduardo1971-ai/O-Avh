@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Build de teste rápido (scripts/build-artifact.mjs) — gerado sob demanda.
+artifact.html
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
