@@ -1,6 +1,9 @@
 import { useMemo, useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { useLocalStorage, generateId } from '../../lib/storage'
 import { useProfile } from '../../context/ProfileContext'
+import { useGame } from '../../context/GameContext'
+import AnimatedNumber from '../../components/AnimatedNumber'
 import { CATEGORIAS, type PaidBy, type Transaction, type TransactionType } from './types'
 
 const formatBRL = (n: number) =>
@@ -10,6 +13,7 @@ const todayISO = () => new Date().toISOString().slice(0, 10)
 
 export default function FinancePage() {
   const { profile } = useProfile()
+  const { trigger } = useGame()
   const [transactions, setTransactions] = useLocalStorage<Transaction[]>('casal:financas', [])
 
   const [description, setDescription] = useState('')
@@ -34,6 +38,12 @@ export default function FinancePage() {
     setTransactions((prev) => [nova, ...prev])
     setDescription('')
     setAmount('')
+    trigger({
+      xp: 5,
+      xpLabel: type === 'receita' ? 'Receita registrada' : 'Despesa registrada',
+      xpIcon: '💰',
+      countKey: 'financeEntries',
+    })
   }
 
   const remover = (id: string) => setTransactions((prev) => prev.filter((t) => t.id !== id))
@@ -62,20 +72,27 @@ export default function FinancePage() {
       </header>
 
       <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <div className="rounded-2xl border border-white bg-white/80 p-4 shadow-sm">
+        <motion.div
+          layout
+          className="rounded-2xl border border-white bg-white/80 p-4 shadow-sm"
+        >
           <p className="text-xs font-medium uppercase text-slate-400">Saldo</p>
           <p className={`mt-1 text-xl font-bold ${resumo.saldo >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-            {formatBRL(resumo.saldo)}
+            <AnimatedNumber value={resumo.saldo} formatter={formatBRL} />
           </p>
-        </div>
-        <div className="rounded-2xl border border-white bg-white/80 p-4 shadow-sm">
+        </motion.div>
+        <motion.div layout className="rounded-2xl border border-white bg-white/80 p-4 shadow-sm">
           <p className="text-xs font-medium uppercase text-slate-400">Receitas</p>
-          <p className="mt-1 text-xl font-bold text-emerald-600">{formatBRL(resumo.receitas)}</p>
-        </div>
-        <div className="rounded-2xl border border-white bg-white/80 p-4 shadow-sm">
+          <p className="mt-1 text-xl font-bold text-emerald-600">
+            <AnimatedNumber value={resumo.receitas} formatter={formatBRL} />
+          </p>
+        </motion.div>
+        <motion.div layout className="rounded-2xl border border-white bg-white/80 p-4 shadow-sm">
           <p className="text-xs font-medium uppercase text-slate-400">Despesas</p>
-          <p className="mt-1 text-xl font-bold text-rose-600">{formatBRL(resumo.despesas)}</p>
-        </div>
+          <p className="mt-1 text-xl font-bold text-rose-600">
+            <AnimatedNumber value={resumo.despesas} formatter={formatBRL} />
+          </p>
+        </motion.div>
       </div>
 
       <div className="mb-6 rounded-2xl border border-white bg-white/80 p-4 shadow-sm">
@@ -94,20 +111,20 @@ export default function FinancePage() {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Descrição (ex: supermercado)"
-            className="rounded-lg border border-rose-100 bg-rose-50/40 p-2 text-sm outline-none focus:border-rose-300"
+            className="rounded-lg border border-rose-100 bg-rose-50/40 p-2 text-sm outline-none transition focus:border-rose-300 focus:ring-2 focus:ring-rose-100"
           />
           <input
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder="Valor (ex: 150.00)"
             inputMode="decimal"
-            className="rounded-lg border border-rose-100 bg-rose-50/40 p-2 text-sm outline-none focus:border-rose-300"
+            className="rounded-lg border border-rose-100 bg-rose-50/40 p-2 text-sm outline-none transition focus:border-rose-300 focus:ring-2 focus:ring-rose-100"
           />
           <input
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="rounded-lg border border-rose-100 bg-rose-50/40 p-2 text-sm outline-none focus:border-rose-300"
+            className="rounded-lg border border-rose-100 bg-rose-50/40 p-2 text-sm outline-none transition focus:border-rose-300 focus:ring-2 focus:ring-rose-100"
           />
           <select
             value={type}
@@ -138,12 +155,14 @@ export default function FinancePage() {
             <option value="ambos">Os dois</option>
           </select>
         </div>
-        <button
+        <motion.button
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.96 }}
           onClick={adicionar}
           className="mt-3 rounded-lg bg-rose-500 px-4 py-2 text-sm font-medium text-white shadow hover:bg-rose-600"
         >
           Adicionar lançamento
-        </button>
+        </motion.button>
       </div>
 
       {ordenadas.length === 0 ? (
@@ -164,29 +183,39 @@ export default function FinancePage() {
               </tr>
             </thead>
             <tbody>
-              {ordenadas.map((t) => (
-                <tr key={t.id} className="border-t border-rose-50">
-                  <td className="px-4 py-2 whitespace-nowrap">
-                    {new Date(t.date + 'T00:00:00').toLocaleDateString('pt-BR')}
-                  </td>
-                  <td className="px-4 py-2">{t.description}</td>
-                  <td className="px-4 py-2">{t.category}</td>
-                  <td className="px-4 py-2">{nomePagador(t.paidBy)}</td>
-                  <td
-                    className={`px-4 py-2 text-right font-medium whitespace-nowrap ${
-                      t.type === 'receita' ? 'text-emerald-600' : 'text-rose-600'
-                    }`}
+              <AnimatePresence initial={false}>
+                {ordenadas.map((t) => (
+                  <motion.tr
+                    key={t.id}
+                    layout
+                    initial={{ opacity: 0, backgroundColor: 'rgba(244,63,94,0.15)' }}
+                    animate={{ opacity: 1, backgroundColor: 'rgba(244,63,94,0)' }}
+                    exit={{ opacity: 0, x: 40 }}
+                    transition={{ duration: 0.4 }}
+                    className="border-t border-rose-50"
                   >
-                    {t.type === 'receita' ? '+' : '-'}
-                    {formatBRL(t.amount)}
-                  </td>
-                  <td className="px-4 py-2 text-right">
-                    <button onClick={() => remover(t.id)} className="text-xs text-slate-400 hover:text-rose-500">
-                      remover
-                    </button>
-                  </td>
-                </tr>
-              ))}
+                    <td className="px-4 py-2 whitespace-nowrap">
+                      {new Date(t.date + 'T00:00:00').toLocaleDateString('pt-BR')}
+                    </td>
+                    <td className="px-4 py-2">{t.description}</td>
+                    <td className="px-4 py-2">{t.category}</td>
+                    <td className="px-4 py-2">{nomePagador(t.paidBy)}</td>
+                    <td
+                      className={`px-4 py-2 text-right font-medium whitespace-nowrap ${
+                        t.type === 'receita' ? 'text-emerald-600' : 'text-rose-600'
+                      }`}
+                    >
+                      {t.type === 'receita' ? '+' : '-'}
+                      {formatBRL(t.amount)}
+                    </td>
+                    <td className="px-4 py-2 text-right">
+                      <button onClick={() => remover(t.id)} className="text-xs text-slate-400 hover:text-rose-500">
+                        remover
+                      </button>
+                    </td>
+                  </motion.tr>
+                ))}
+              </AnimatePresence>
             </tbody>
           </table>
         </div>

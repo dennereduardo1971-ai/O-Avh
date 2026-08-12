@@ -1,10 +1,14 @@
 import { useMemo, useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { useLocalStorage, generateId } from '../../lib/storage'
 import { useProfile } from '../../context/ProfileContext'
+import { useGame } from '../../context/GameContext'
+import { confettiPop } from '../../lib/confetti'
 import type { AssignedTo, DailyTask } from './types'
 
 export default function TasksPage() {
   const { profile } = useProfile()
+  const { trigger } = useGame()
   const [tasks, setTasks] = useLocalStorage<DailyTask[]>('casal:tarefas', [])
   const [title, setTitle] = useState('')
   const [assignedTo, setAssignedTo] = useState<AssignedTo>(profile.active)
@@ -24,8 +28,16 @@ export default function TasksPage() {
     setTitle('')
   }
 
-  const alternar = (id: string) =>
+  const alternar = (id: string, e: React.MouseEvent) => {
+    const task = tasks.find((t) => t.id === id)
+    if (!task) return
+    const ficandoConcluida = !task.done
     setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, done: !t.done } : t)))
+    if (ficandoConcluida) {
+      confettiPop({ x: e.clientX / window.innerWidth, y: e.clientY / window.innerHeight })
+      trigger({ xp: 8, xpLabel: `Tarefa concluída: ${task.title}`, xpIcon: '✅', countKey: 'tasksDone' })
+    }
+  }
 
   const remover = (id: string) => setTasks((prev) => prev.filter((t) => t.id !== id))
 
@@ -50,20 +62,40 @@ export default function TasksPage() {
       <div className="mb-6 rounded-2xl border border-white bg-white/80 p-4 shadow-sm">
         <div className="mb-2 flex items-center justify-between text-sm">
           <span className="font-medium text-slate-600">Progresso do dia</span>
-          <span className="text-slate-400">{progresso}%</span>
+          <motion.span
+            key={progresso}
+            initial={{ scale: 1.3, color: '#f43f5e' }}
+            animate={{ scale: 1, color: '#94a3b8' }}
+            className="text-slate-400"
+          >
+            {progresso}%
+          </motion.span>
         </div>
-        <div className="h-2 w-full overflow-hidden rounded-full bg-rose-100">
-          <div
-            className="h-full rounded-full bg-rose-500 transition-all"
-            style={{ width: `${progresso}%` }}
+        <div className="h-2.5 w-full overflow-hidden rounded-full bg-rose-100">
+          <motion.div
+            className="h-full rounded-full bg-gradient-to-r from-rose-400 to-fuchsia-500"
+            initial={{ width: 0 }}
+            animate={{ width: `${progresso}%` }}
+            transition={{ type: 'spring', stiffness: 120, damping: 18 }}
           />
         </div>
-        <button
+        {progresso === 100 && tasks.length > 0 && (
+          <motion.p
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-2 text-xs font-semibold text-emerald-600"
+          >
+            🎉 Tudo feito por hoje! Vocês arrasaram.
+          </motion.p>
+        )}
+        <motion.button
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.95, rotate: -180 }}
           onClick={resetarDia}
           className="mt-3 rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-rose-600 ring-1 ring-rose-200 hover:bg-rose-50"
         >
           🔄 Resetar tarefas para um novo dia
-        </button>
+        </motion.button>
       </div>
 
       <div className="mb-6 flex flex-wrap gap-2 rounded-2xl border border-white bg-white/80 p-4 shadow-sm">
@@ -72,7 +104,7 @@ export default function TasksPage() {
           onChange={(e) => setTitle(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && adicionar()}
           placeholder="Nova tarefa (ex: lavar louça)"
-          className="min-w-[200px] flex-1 rounded-lg border border-rose-100 bg-rose-50/40 p-2 text-sm outline-none focus:border-rose-300"
+          className="min-w-[200px] flex-1 rounded-lg border border-rose-100 bg-rose-50/40 p-2 text-sm outline-none transition focus:border-rose-300 focus:ring-2 focus:ring-rose-100"
         />
         <select
           value={assignedTo}
@@ -83,12 +115,14 @@ export default function TasksPage() {
           <option value="p2">{profile.names.p2}</option>
           <option value="ambos">Os dois</option>
         </select>
-        <button
+        <motion.button
+          whileHover={{ scale: 1.04 }}
+          whileTap={{ scale: 0.95 }}
           onClick={adicionar}
           className="rounded-lg bg-rose-500 px-4 py-2 text-sm font-medium text-white shadow hover:bg-rose-600"
         >
           Adicionar
-        </button>
+        </motion.button>
       </div>
 
       <div className="mb-4 flex flex-wrap gap-2 text-sm">
@@ -111,28 +145,49 @@ export default function TasksPage() {
         </p>
       ) : (
         <ul className="flex flex-col gap-2">
-          {visiveis.map((t) => (
-            <li
-              key={t.id}
-              className="flex items-center gap-3 rounded-xl border border-white bg-white/80 p-3 shadow-sm"
-            >
-              <input
-                type="checkbox"
-                checked={t.done}
-                onChange={() => alternar(t.id)}
-                className="h-4 w-4 accent-rose-500"
-              />
-              <span className={`flex-1 text-sm ${t.done ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
-                {t.title}
-              </span>
-              <span className="rounded-full bg-rose-50 px-2 py-0.5 text-xs text-rose-500">
-                {nomeResponsavel(t.assignedTo)}
-              </span>
-              <button onClick={() => remover(t.id)} className="text-xs text-slate-400 hover:text-rose-500">
-                remover
-              </button>
-            </li>
-          ))}
+          <AnimatePresence initial={false}>
+            {visiveis.map((t) => (
+              <motion.li
+                key={t.id}
+                layout
+                initial={{ opacity: 0, x: -16 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 30, transition: { duration: 0.15 } }}
+                className="flex items-center gap-3 rounded-xl border border-white bg-white/80 p-3 shadow-sm"
+              >
+                <motion.button
+                  whileTap={{ scale: 0.8 }}
+                  onClick={(e) => alternar(t.id, e)}
+                  aria-label={t.done ? 'Marcar como não feita' : 'Marcar como feita'}
+                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-xs text-white transition ${
+                    t.done ? 'border-emerald-500 bg-emerald-500' : 'border-rose-200 bg-white'
+                  }`}
+                >
+                  <AnimatePresence>
+                    {t.done && (
+                      <motion.span
+                        initial={{ scale: 0, rotate: -90 }}
+                        animate={{ scale: 1, rotate: 0 }}
+                        exit={{ scale: 0 }}
+                        transition={{ type: 'spring', stiffness: 500, damping: 20 }}
+                      >
+                        ✓
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
+                </motion.button>
+                <span className={`flex-1 text-sm transition ${t.done ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
+                  {t.title}
+                </span>
+                <span className="rounded-full bg-rose-50 px-2 py-0.5 text-xs text-rose-500">
+                  {nomeResponsavel(t.assignedTo)}
+                </span>
+                <button onClick={() => remover(t.id)} className="text-xs text-slate-400 hover:text-rose-500">
+                  remover
+                </button>
+              </motion.li>
+            ))}
+          </AnimatePresence>
         </ul>
       )}
     </div>
