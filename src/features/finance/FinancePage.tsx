@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { useLocalStorage, generateId } from '../../lib/storage'
+import { generateId } from '../../lib/storage'
+import { useSyncedArea } from '../../lib/sync/hooks'
 import { useProfile } from '../../context/ProfileContext'
 import { useGame } from '../../context/GameContext'
 import AnimatedNumber from '../../components/AnimatedNumber'
@@ -15,7 +16,7 @@ const todayISO = () => new Date().toISOString().slice(0, 10)
 export default function FinancePage() {
   const { profile } = useProfile()
   const { trigger } = useGame()
-  const [transactions, setTransactions] = useLocalStorage<Transaction[]>('casal:financas', [])
+  const [transactions, setTransactions] = useSyncedArea<Transaction[]>('financas', [])
 
   const [description, setDescription] = useState('')
   const [amount, setAmount] = useState('')

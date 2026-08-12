@@ -1,29 +1,84 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 /**
- * Hook simples de persistência em localStorage.
- * Tudo do app fica salvo só no navegador de quem está usando —
- * nenhum dado sai daqui, é só nosso.
+ * Persistência em localStorage com estado compartilhado.
+ *
+ * Antes cada `useLocalStorage` guardava a própria cópia do valor: dois
+ * componentes lendo a mesma chave não se falavam (o Painel só via o recadinho
+ * novo depois de trocar de rota). Agora existe um único valor por chave em
+ * memória e todo mundo que usa aquela chave é avisado quando ele muda.
+ *
+ * Isso também é o que permite a sincronização entre os celulares empurrar
+ * dados que chegaram do outro aparelho direto para dentro das telas, via
+ * `definirValorGlobal`, sem que as telas precisem saber que sync existe.
  */
-export function useLocalStorage<T>(key: string, initialValue: T) {
-  const [value, setValue] = useState<T>(() => {
-    try {
-      const raw = window.localStorage.getItem(key)
-      return raw ? (JSON.parse(raw) as T) : initialValue
-    } catch {
-      return initialValue
-    }
-  })
+
+const memoria = new Map<string, unknown>()
+const ouvintes = new Map<string, Set<(valor: unknown) => void>>()
+
+function lerDoDisco<T>(chave: string, inicial: T): T {
+  try {
+    const bruto = window.localStorage.getItem(chave)
+    return bruto ? (JSON.parse(bruto) as T) : inicial
+  } catch {
+    return inicial
+  }
+}
+
+function gravarNoDisco(chave: string, valor: unknown) {
+  try {
+    window.localStorage.setItem(chave, JSON.stringify(valor))
+  } catch {
+    // localStorage indisponível (modo privado, cota cheia etc.) — ignora.
+  }
+}
+
+/** Valor atual da chave, lendo do disco na primeira vez. */
+export function valorAtual<T>(chave: string, inicial: T): T {
+  if (memoria.has(chave)) return memoria.get(chave) as T
+  const valor = lerDoDisco(chave, inicial)
+  memoria.set(chave, valor)
+  return valor
+}
+
+/**
+ * Troca o valor da chave e avisa todo mundo — inclusive as telas já montadas.
+ * A sincronização usa isto ao receber dados do outro celular.
+ */
+export function definirValorGlobal<T>(chave: string, valor: T) {
+  memoria.set(chave, valor)
+  gravarNoDisco(chave, valor)
+  ouvintes.get(chave)?.forEach((ouvinte) => ouvinte(valor))
+}
+
+export function useLocalStorage<T>(chave: string, inicial: T) {
+  const inicialRef = useRef(inicial)
+  const [valor, setValor] = useState<T>(() => valorAtual(chave, inicialRef.current))
 
   useEffect(() => {
-    try {
-      window.localStorage.setItem(key, JSON.stringify(value))
-    } catch {
-      // localStorage indisponível (modo privado, cota cheia etc.) — ignora.
-    }
-  }, [key, value])
+    setValor(valorAtual(chave, inicialRef.current))
 
-  return [value, setValue] as const
+    const ouvinte = (novo: unknown) => setValor(novo as T)
+    const conjunto = ouvintes.get(chave) ?? new Set()
+    conjunto.add(ouvinte)
+    ouvintes.set(chave, conjunto)
+
+    return () => {
+      conjunto.delete(ouvinte)
+      if (conjunto.size === 0) ouvintes.delete(chave)
+    }
+  }, [chave])
+
+  const definir = useCallback(
+    (acao: T | ((anterior: T) => T)) => {
+      const anterior = valorAtual(chave, inicialRef.current)
+      const proximo = typeof acao === 'function' ? (acao as (a: T) => T)(anterior) : acao
+      definirValorGlobal(chave, proximo)
+    },
+    [chave],
+  )
+
+  return [valor, definir] as const
 }
 
 export function generateId(): string {

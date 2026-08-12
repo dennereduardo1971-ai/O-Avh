@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { useLocalStorage, generateId } from '../../lib/storage'
+import { generateId } from '../../lib/storage'
+import { useSyncedArea } from '../../lib/sync/hooks'
 import { useGame } from '../../context/GameContext'
 import { confettiPop } from '../../lib/confetti'
 import Panel from '../../components/ui/Panel'
@@ -22,7 +23,7 @@ const STATUS_STYLE: Record<LeisureStatus, string> = {
 
 export default function LeisurePage() {
   const { trigger } = useGame()
-  const [ideas, setIdeas] = useLocalStorage<LeisureIdea[]>('casal:lazer', [])
+  const [ideas, setIdeas] = useSyncedArea<LeisureIdea[]>('lazer', [])
   const [title, setTitle] = useState('')
   const [category, setCategory] = useState<(typeof CATEGORIAS_LAZER)[number]>('Filme/Série')
   const [notes, setNotes] = useState('')

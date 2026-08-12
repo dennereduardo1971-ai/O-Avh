@@ -1,5 +1,5 @@
 import { createContext, useContext, type ReactNode } from 'react'
-import { useLocalStorage } from '../lib/storage'
+import { useSyncedDoc } from '../lib/sync/hooks'
 
 export type PersonKey = 'p1' | 'p2'
 
@@ -23,10 +23,9 @@ interface ProfileContextValue {
 const ProfileContext = createContext<ProfileContextValue | null>(null)
 
 export function ProfileProvider({ children }: { children: ReactNode }) {
-  const [profile, setProfile] = useLocalStorage<CoupleProfile>(
-    'casal:perfil',
-    DEFAULT_PROFILE,
-  )
+  // Os nomes são do casal e vão para os dois aparelhos; `active` fica só aqui,
+  // porque quem está com o celular na mão é diferente em cada um.
+  const [profile, setProfile] = useSyncedDoc<CoupleProfile>('perfil', DEFAULT_PROFILE)
 
   const setActive = (person: PersonKey) =>
     setProfile((prev) => ({ ...prev, active: person }))

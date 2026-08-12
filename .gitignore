@@ -15,6 +15,11 @@ dist-ssr
 # Build de teste rápido (scripts/build-artifact.mjs) — gerado sob demanda.
 artifact.html
 
+# Chaves do Supabase para rodar a sincronização localmente.
+.env
+.env.*
+!.env.example
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

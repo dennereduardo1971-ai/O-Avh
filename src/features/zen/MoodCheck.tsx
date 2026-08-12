@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { useLocalStorage } from '../../lib/storage'
+import { useSyncedArea } from '../../lib/sync/hooks'
 import { todayISO } from '../../lib/gameMath'
 import { useProfile, type PersonKey } from '../../context/ProfileContext'
 
@@ -17,13 +17,13 @@ export const MOODS = [
 type MoodLog = Record<string, Partial<Record<PersonKey, string>>>
 
 export function useTodayMoods() {
-  const [log] = useLocalStorage<MoodLog>('casal:humor', {})
+  const [log] = useSyncedArea<MoodLog>('humor', {})
   return log[todayISO()] ?? {}
 }
 
 export default function MoodCheck() {
   const { profile, otherOf } = useProfile()
-  const [log, setLog] = useLocalStorage<MoodLog>('casal:humor', {})
+  const [log, setLog] = useSyncedArea<MoodLog>('humor', {})
 
   const hoje = todayISO()
   const doDia = log[hoje] ?? {}

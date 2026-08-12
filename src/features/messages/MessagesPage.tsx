@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { useLocalStorage, generateId } from '../../lib/storage'
+import { generateId } from '../../lib/storage'
+import { useSyncedArea } from '../../lib/sync/hooks'
 import { useProfile } from '../../context/ProfileContext'
 import { useGame } from '../../context/GameContext'
 import { confettiPop } from '../../lib/confetti'
@@ -23,7 +24,7 @@ const SUGESTOES = [
 export default function MessagesPage() {
   const { profile, otherOf } = useProfile()
   const { trigger } = useGame()
-  const [messages, setMessages] = useLocalStorage<CuteMessage[]>('casal:mensagens', [])
+  const [messages, setMessages] = useSyncedArea<CuteMessage[]>('mensagens', [])
   const [text, setText] = useState('')
   const [pulseId, setPulseId] = useState<string | null>(null)
 

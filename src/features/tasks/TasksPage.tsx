@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { useLocalStorage, generateId } from '../../lib/storage'
+import { generateId } from '../../lib/storage'
+import { useSyncedArea } from '../../lib/sync/hooks'
 import { useProfile } from '../../context/ProfileContext'
 import { useGame } from '../../context/GameContext'
 import { confettiPop } from '../../lib/confetti'
@@ -12,7 +13,7 @@ import type { AssignedTo, DailyTask } from './types'
 export default function TasksPage() {
   const { profile } = useProfile()
   const { trigger } = useGame()
-  const [tasks, setTasks] = useLocalStorage<DailyTask[]>('casal:tarefas', [])
+  const [tasks, setTasks] = useSyncedArea<DailyTask[]>('tarefas', [])
   const [title, setTitle] = useState('')
   const [assignedTo, setAssignedTo] = useState<AssignedTo>(profile.active)
   const [filtro, setFiltro] = useState<'todas' | AssignedTo>('todas')

@@ -1,0 +1,33 @@
+{
+  "name": "Nosso Cantinho",
+  "short_name": "Cantinho",
+  "description": "O refúgio a dois: recadinhos, tesouro, missões e aventuras.",
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#05040d",
+  "theme_color": "#05040d",
+  "categories": ["lifestyle", "productivity"],
+  "icons": [
+    {
+      "src": "icone-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icone-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icone-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

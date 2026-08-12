@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useRef, type ReactNode } from 'react'
-import { useLocalStorage } from '../lib/storage'
+import { useSyncedDoc } from '../lib/sync/hooks'
 import { levelInfo, todayISO, yesterdayISO } from '../lib/gameMath'
 import { ACHIEVEMENTS, EMPTY_COUNTS, type GameCounts } from '../lib/achievements'
 import { useToast } from './ToastContext'
@@ -44,7 +44,7 @@ interface GameContextValue {
 const GameContext = createContext<GameContextValue | null>(null)
 
 export function GameProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useLocalStorage<GameState>('casal:game', DEFAULT_STATE)
+  const [state, setState] = useSyncedDoc<GameState>('jogo', DEFAULT_STATE)
   const toast = useToast()
   // Estes dois refs precisam já nascer preenchidos com o que veio do
   // localStorage. Se fossem semeados num useEffect, o efeito que anuncia
@@ -55,6 +55,16 @@ export function GameProvider({ children }: { children: ReactNode }) {
     notifiedAchievements.current = new Set(state.achievements)
   }
   const notified = notifiedAchievements.current
+
+  // Conquistas que chegaram pela sincronização já vêm marcadas como ganhas.
+  // Registrá-las aqui, durante a renderização — antes do efeito que dispara os
+  // toasts — evita comemorar de novo, com confete, tudo o que o outro celular
+  // já tinha desbloqueado. É a mesma armadilha dos refs acima, agora vinda de
+  // fora do aparelho.
+  //
+  // Conquista ganha aqui não é afetada: ela só entra em `achievements` depois
+  // de o efeito ter avisado e registrado o id.
+  for (const id of state.achievements) notified.add(id)
 
   const notifiedLevel = useRef<number | null>(null)
   if (notifiedLevel.current === null) {
