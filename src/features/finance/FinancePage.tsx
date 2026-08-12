@@ -4,11 +4,12 @@ import { useLocalStorage, generateId } from '../../lib/storage'
 import { useProfile } from '../../context/ProfileContext'
 import { useGame } from '../../context/GameContext'
 import AnimatedNumber from '../../components/AnimatedNumber'
+import Panel from '../../components/ui/Panel'
+import GameButton from '../../components/ui/GameButton'
+import SectionTitle from '../../components/ui/SectionTitle'
 import { CATEGORIAS, type PaidBy, type Transaction, type TransactionType } from './types'
 
-const formatBRL = (n: number) =>
-  n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-
+const formatBRL = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 const todayISO = () => new Date().toISOString().slice(0, 10)
 
 export default function FinancePage() {
@@ -26,22 +27,24 @@ export default function FinancePage() {
   const adicionar = () => {
     const valor = Number(amount.replace(',', '.'))
     if (!description.trim() || !valor || valor <= 0) return
-    const nova: Transaction = {
-      id: generateId(),
-      description: description.trim(),
-      amount: valor,
-      type,
-      category,
-      paidBy,
-      date,
-    }
-    setTransactions((prev) => [nova, ...prev])
+    setTransactions((prev) => [
+      {
+        id: generateId(),
+        description: description.trim(),
+        amount: valor,
+        type,
+        category,
+        paidBy,
+        date,
+      },
+      ...prev,
+    ])
     setDescription('')
     setAmount('')
     trigger({
       xp: 5,
       xpLabel: type === 'receita' ? 'Receita registrada' : 'Despesa registrada',
-      xpIcon: '💰',
+      xpIcon: '💎',
       countKey: 'financeEntries',
     })
   }
@@ -61,75 +64,78 @@ export default function FinancePage() {
   }, [transactions])
 
   const ordenadas = [...transactions].sort((a, b) => b.date.localeCompare(a.date))
-
   const nomePagador = (p: PaidBy) => (p === 'ambos' ? 'Os dois' : profile.names[p])
+  const maiorGasto = Math.max(resumo.porPessoa.p1, resumo.porPessoa.p2, resumo.porPessoa.ambos, 1)
 
   return (
     <div>
-      <header className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-800">💰 Finanças do Casal</h1>
-        <p className="mt-1 text-slate-500">Registrem receitas e despesas para manter as contas em dia.</p>
-      </header>
+      <SectionTitle icon="💎" title="Tesouro" subtitle="As contas do casal, sem susto." />
 
-      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <motion.div
-          layout
-          className="rounded-2xl border border-white bg-white/80 p-4 shadow-sm"
-        >
-          <p className="text-xs font-medium uppercase text-slate-400">Saldo</p>
-          <p className={`mt-1 text-xl font-bold ${resumo.saldo >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-            <AnimatedNumber value={resumo.saldo} formatter={formatBRL} />
-          </p>
-        </motion.div>
-        <motion.div layout className="rounded-2xl border border-white bg-white/80 p-4 shadow-sm">
-          <p className="text-xs font-medium uppercase text-slate-400">Receitas</p>
-          <p className="mt-1 text-xl font-bold text-emerald-600">
-            <AnimatedNumber value={resumo.receitas} formatter={formatBRL} />
-          </p>
-        </motion.div>
-        <motion.div layout className="rounded-2xl border border-white bg-white/80 p-4 shadow-sm">
-          <p className="text-xs font-medium uppercase text-slate-400">Despesas</p>
-          <p className="mt-1 text-xl font-bold text-rose-600">
-            <AnimatedNumber value={resumo.despesas} formatter={formatBRL} />
-          </p>
-        </motion.div>
+      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        {[
+          { label: 'Saldo', value: resumo.saldo, tone: resumo.saldo >= 0 ? 'mint' : 'blush' },
+          { label: 'Receitas', value: resumo.receitas, tone: 'mint' },
+          { label: 'Despesas', value: resumo.despesas, tone: 'blush' },
+        ].map((s) => (
+          <Panel key={s.label} glow={s.tone as 'mint' | 'blush'} className="p-4">
+            <p className="hud-label">{s.label}</p>
+            <p
+              className={`hud-value mt-1.5 text-2xl font-black ${
+                s.tone === 'mint' ? 'text-mint-300' : 'text-blush-300'
+              }`}
+            >
+              <AnimatedNumber value={s.value} formatter={formatBRL} />
+            </p>
+          </Panel>
+        ))}
       </div>
 
-      <div className="mb-6 rounded-2xl border border-white bg-white/80 p-4 shadow-sm">
-        <p className="mb-2 text-xs font-medium uppercase text-slate-400">Quem gastou mais</p>
-        <div className="flex flex-wrap gap-4 text-sm text-slate-600">
-          <span>{profile.names.p1}: <strong>{formatBRL(resumo.porPessoa.p1)}</strong></span>
-          <span>{profile.names.p2}: <strong>{formatBRL(resumo.porPessoa.p2)}</strong></span>
-          <span>Os dois: <strong>{formatBRL(resumo.porPessoa.ambos)}</strong></span>
+      {/* Quem gastou mais — com barras para leitura imediata */}
+      <Panel glow="iris" className="mb-4 p-5">
+        <p className="hud-label mb-3">Quem gastou mais</p>
+        <div className="flex flex-col gap-2.5">
+          {(['p1', 'p2', 'ambos'] as PaidBy[]).map((p) => (
+            <div key={p} className="flex items-center gap-3">
+              <span className="w-24 shrink-0 truncate text-xs font-semibold text-parch-dim">
+                {nomePagador(p)}
+              </span>
+              <div className="h-2 flex-1 overflow-hidden rounded-full bg-night-950/70">
+                <motion.div
+                  className="h-full rounded-full bg-gradient-to-r from-iris-500 to-blush-400"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${(resumo.porPessoa[p] / maiorGasto) * 100}%` }}
+                  transition={{ type: 'spring', stiffness: 90, damping: 20 }}
+                />
+              </div>
+              <span className="hud-value w-24 shrink-0 text-right text-xs font-bold text-parch">
+                {formatBRL(resumo.porPessoa[p])}
+              </span>
+            </div>
+          ))}
         </div>
-      </div>
+      </Panel>
 
-      <div className="mb-8 rounded-2xl border border-white bg-white/80 p-4 shadow-sm">
-        <p className="mb-3 text-sm font-semibold text-slate-700">Novo lançamento</p>
+      <Panel glow="mint" className="mb-6 p-5">
+        <p className="hud-label mb-3">Novo lançamento</p>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <input
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Descrição (ex: supermercado)"
-            className="rounded-lg border border-rose-100 bg-rose-50/40 p-2 text-sm outline-none transition focus:border-rose-300 focus:ring-2 focus:ring-rose-100"
+            className="field"
           />
           <input
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder="Valor (ex: 150.00)"
             inputMode="decimal"
-            className="rounded-lg border border-rose-100 bg-rose-50/40 p-2 text-sm outline-none transition focus:border-rose-300 focus:ring-2 focus:ring-rose-100"
+            className="field"
           />
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="rounded-lg border border-rose-100 bg-rose-50/40 p-2 text-sm outline-none transition focus:border-rose-300 focus:ring-2 focus:ring-rose-100"
-          />
+          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="field" />
           <select
             value={type}
             onChange={(e) => setType(e.target.value as TransactionType)}
-            className="rounded-lg border border-rose-100 bg-rose-50/40 p-2 text-sm outline-none focus:border-rose-300"
+            className="field"
           >
             <option value="despesa">Despesa</option>
             <option value="receita">Receita</option>
@@ -137,7 +143,7 @@ export default function FinancePage() {
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value as (typeof CATEGORIAS)[number])}
-            className="rounded-lg border border-rose-100 bg-rose-50/40 p-2 text-sm outline-none focus:border-rose-300"
+            className="field"
           >
             {CATEGORIAS.map((c) => (
               <option key={c} value={c}>
@@ -145,80 +151,84 @@ export default function FinancePage() {
               </option>
             ))}
           </select>
-          <select
-            value={paidBy}
-            onChange={(e) => setPaidBy(e.target.value as PaidBy)}
-            className="rounded-lg border border-rose-100 bg-rose-50/40 p-2 text-sm outline-none focus:border-rose-300"
-          >
+          <select value={paidBy} onChange={(e) => setPaidBy(e.target.value as PaidBy)} className="field">
             <option value="p1">{profile.names.p1}</option>
             <option value="p2">{profile.names.p2}</option>
             <option value="ambos">Os dois</option>
           </select>
         </div>
-        <motion.button
-          whileHover={{ scale: 1.03 }}
-          whileTap={{ scale: 0.96 }}
-          onClick={adicionar}
-          className="mt-3 rounded-lg bg-rose-500 px-4 py-2 text-sm font-medium text-white shadow hover:bg-rose-600"
-        >
+        <GameButton onClick={adicionar} className="mt-4">
           Adicionar lançamento
-        </motion.button>
-      </div>
+        </GameButton>
+      </Panel>
 
       {ordenadas.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-rose-200 p-6 text-center text-sm text-slate-400">
-          Nenhum lançamento ainda.
-        </p>
+        <Panel glow="none" className="p-10 text-center">
+          <p className="text-3xl" aria-hidden>
+            💎
+          </p>
+          <p className="mt-2 text-sm text-parch-faint">Nenhum lançamento ainda.</p>
+        </Panel>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-white bg-white/80 shadow-sm">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-rose-50 text-xs uppercase text-slate-500">
-              <tr>
-                <th className="px-4 py-2">Data</th>
-                <th className="px-4 py-2">Descrição</th>
-                <th className="px-4 py-2">Categoria</th>
-                <th className="px-4 py-2">Pago por</th>
-                <th className="px-4 py-2 text-right">Valor</th>
-                <th className="px-4 py-2" />
-              </tr>
-            </thead>
-            <tbody>
-              <AnimatePresence initial={false}>
-                {ordenadas.map((t) => (
-                  <motion.tr
-                    key={t.id}
-                    layout
-                    initial={{ opacity: 0, backgroundColor: 'rgba(244,63,94,0.15)' }}
-                    animate={{ opacity: 1, backgroundColor: 'rgba(244,63,94,0)' }}
-                    exit={{ opacity: 0, x: 40 }}
-                    transition={{ duration: 0.4 }}
-                    className="border-t border-rose-50"
-                  >
-                    <td className="px-4 py-2 whitespace-nowrap">
-                      {new Date(t.date + 'T00:00:00').toLocaleDateString('pt-BR')}
-                    </td>
-                    <td className="px-4 py-2">{t.description}</td>
-                    <td className="px-4 py-2">{t.category}</td>
-                    <td className="px-4 py-2">{nomePagador(t.paidBy)}</td>
-                    <td
-                      className={`px-4 py-2 text-right font-medium whitespace-nowrap ${
-                        t.type === 'receita' ? 'text-emerald-600' : 'text-rose-600'
-                      }`}
+        <Panel glow="none" className="overflow-hidden p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-white/8 bg-white/4">
+                  {['Data', 'Descrição', 'Categoria', 'Pago por'].map((h) => (
+                    <th key={h} className="hud-label px-4 py-3">
+                      {h}
+                    </th>
+                  ))}
+                  <th className="hud-label px-4 py-3 text-right">Valor</th>
+                  <th className="px-4 py-3" />
+                </tr>
+              </thead>
+              <tbody>
+                <AnimatePresence initial={false}>
+                  {ordenadas.map((t) => (
+                    <motion.tr
+                      key={t.id}
+                      layout
+                      initial={{ opacity: 0, backgroundColor: 'rgba(94,234,212,0.14)' }}
+                      animate={{ opacity: 1, backgroundColor: 'rgba(94,234,212,0)' }}
+                      exit={{ opacity: 0, x: 40 }}
+                      transition={{ duration: 0.5 }}
+                      className="border-b border-white/5 last:border-0"
                     >
-                      {t.type === 'receita' ? '+' : '-'}
-                      {formatBRL(t.amount)}
-                    </td>
-                    <td className="px-4 py-2 text-right">
-                      <button onClick={() => remover(t.id)} className="text-xs text-slate-400 hover:text-rose-500">
-                        remover
-                      </button>
-                    </td>
-                  </motion.tr>
-                ))}
-              </AnimatePresence>
-            </tbody>
-          </table>
-        </div>
+                      <td className="px-4 py-3 whitespace-nowrap text-parch-dim">
+                        {new Date(t.date + 'T00:00:00').toLocaleDateString('pt-BR')}
+                      </td>
+                      <td className="px-4 py-3 text-parch">{t.description}</td>
+                      <td className="px-4 py-3">
+                        <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] text-parch-dim">
+                          {t.category}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-parch-dim">{nomePagador(t.paidBy)}</td>
+                      <td
+                        className={`hud-value px-4 py-3 text-right font-bold whitespace-nowrap ${
+                          t.type === 'receita' ? 'text-mint-300' : 'text-blush-300'
+                        }`}
+                      >
+                        {t.type === 'receita' ? '+' : '−'}
+                        {formatBRL(t.amount)}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          onClick={() => remover(t.id)}
+                          className="text-xs text-parch-faint transition-colors hover:text-blush-300"
+                        >
+                          remover
+                        </button>
+                      </td>
+                    </motion.tr>
+                  ))}
+                </AnimatePresence>
+              </tbody>
+            </table>
+          </div>
+        </Panel>
       )}
     </div>
   )

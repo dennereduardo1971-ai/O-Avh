@@ -4,6 +4,9 @@ import { useLocalStorage, generateId } from '../../lib/storage'
 import { useProfile } from '../../context/ProfileContext'
 import { useGame } from '../../context/GameContext'
 import { confettiPop } from '../../lib/confetti'
+import Panel from '../../components/ui/Panel'
+import GameButton from '../../components/ui/GameButton'
+import SectionTitle from '../../components/ui/SectionTitle'
 import type { CuteMessage } from './types'
 
 const SUGESTOES = [
@@ -27,16 +30,18 @@ export default function MessagesPage() {
   const enviar = () => {
     const trimmed = text.trim()
     if (!trimmed) return
-    const nova: CuteMessage = {
-      id: generateId(),
-      from: profile.active,
-      text: trimmed,
-      createdAt: new Date().toISOString(),
-      hearts: 0,
-    }
-    setMessages((prev) => [nova, ...prev])
+    setMessages((prev) => [
+      {
+        id: generateId(),
+        from: profile.active,
+        text: trimmed,
+        createdAt: new Date().toISOString(),
+        hearts: 0,
+      },
+      ...prev,
+    ])
     setText('')
-    trigger({ xp: 10, xpLabel: 'Mensagem fofa enviada', xpIcon: '💌', countKey: 'messages' })
+    trigger({ xp: 10, xpLabel: 'Recadinho enviado', xpIcon: '💌', countKey: 'messages' })
   }
 
   const curtir = (id: string, e: React.MouseEvent) => {
@@ -49,101 +54,101 @@ export default function MessagesPage() {
 
   const remover = (id: string) => setMessages((prev) => prev.filter((m) => m.id !== id))
 
-  const usarSugestao = () => {
-    const sugestao = SUGESTOES[Math.floor(Math.random() * SUGESTOES.length)]
-    setText(sugestao)
-  }
+  const usarSugestao = () => setText(SUGESTOES[Math.floor(Math.random() * SUGESTOES.length)])
 
   const destinatario = profile.names[otherOf(profile.active)]
 
   return (
     <div>
-      <header className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-800">💌 Mensagens Fofas</h1>
-        <p className="mt-1 text-slate-500">
-          Deixe um recadinho carinhoso para {destinatario}.
-        </p>
-      </header>
+      <SectionTitle
+        icon="💌"
+        title="Recadinhos"
+        subtitle={`Deixe algo carinhoso para ${destinatario}.`}
+      />
 
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-8 rounded-2xl border border-white bg-white/80 p-4 shadow-sm"
-      >
+      <Panel glow="blush" className="mb-7 p-5">
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder={`Escreva algo fofo para ${destinatario}...`}
           rows={3}
-          className="w-full resize-none rounded-xl border border-rose-100 bg-rose-50/40 p-3 text-sm outline-none transition focus:border-rose-300 focus:ring-2 focus:ring-rose-100"
+          className="field resize-none"
         />
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <motion.button
-            whileHover={{ scale: 1.04 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={enviar}
-            className="rounded-lg bg-rose-500 px-4 py-2 text-sm font-medium text-white shadow hover:bg-rose-600"
-          >
+          <GameButton onClick={enviar} disabled={!text.trim()}>
             Enviar 💌
-          </motion.button>
-          <motion.button
-            whileHover={{ scale: 1.04 }}
-            whileTap={{ scale: 0.95, rotate: -4 }}
-            onClick={usarSugestao}
-            className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-rose-600 ring-1 ring-rose-200 hover:bg-rose-50"
-          >
-            ✨ Sugestão fofa
-          </motion.button>
-          <span className="ml-auto text-xs text-slate-400">enviando como {profile.names[profile.active]}</span>
+          </GameButton>
+          <GameButton onClick={usarSugestao} variant="soft">
+            ✨ Sugestão
+          </GameButton>
+          <span className="hud-label ml-auto">como {profile.names[profile.active]}</span>
         </div>
-      </motion.div>
+      </Panel>
 
       {messages.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-rose-200 p-6 text-center text-sm text-slate-400">
-          Nenhuma mensagem ainda. Que tal mandar a primeira? 💕
-        </p>
+        <Panel glow="none" className="p-10 text-center">
+          <p className="text-3xl" aria-hidden>
+            💌
+          </p>
+          <p className="mt-2 text-sm text-parch-faint">
+            Nenhum recadinho ainda. Que tal mandar o primeiro?
+          </p>
+        </Panel>
       ) : (
         <ul className="flex flex-col gap-3">
           <AnimatePresence initial={false}>
-            {messages.map((m) => (
-              <motion.li
-                key={m.id}
-                layout
-                initial={{ opacity: 0, y: 16, scale: 0.9 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.85, transition: { duration: 0.15 } }}
-                transition={{ type: 'spring', stiffness: 350, damping: 26 }}
-                className={`rounded-2xl border p-4 shadow-sm ${
-                  m.from === profile.active
-                    ? 'ml-auto max-w-xl border-rose-200 bg-rose-100/70'
-                    : 'mr-auto max-w-xl border-white bg-white/80'
-                }`}
-              >
-                <p className="text-sm font-semibold text-rose-600">{profile.names[m.from]}</p>
-                <p className="mt-1 whitespace-pre-wrap text-slate-700">{m.text}</p>
-                <div className="mt-2 flex items-center gap-3 text-xs text-slate-400">
-                  <span>
-                    {new Date(m.createdAt).toLocaleString('pt-BR', {
-                      day: '2-digit',
-                      month: '2-digit',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </span>
-                  <motion.button
-                    whileTap={{ scale: 1.4 }}
-                    animate={pulseId === m.id ? { scale: [1, 1.5, 1] } : {}}
-                    onClick={(e) => curtir(m.id, e)}
-                    className="hover:text-rose-500"
-                  >
-                    ❤️ {m.hearts}
-                  </motion.button>
-                  <button onClick={() => remover(m.id)} className="ml-auto hover:text-rose-500">
-                    remover
-                  </button>
-                </div>
-              </motion.li>
-            ))}
+            {messages.map((m) => {
+              const meu = m.from === profile.active
+              return (
+                <motion.li
+                  key={m.id}
+                  layout
+                  initial={{ opacity: 0, y: 18, scale: 0.94 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.16 } }}
+                  transition={{ type: 'spring', stiffness: 340, damping: 26 }}
+                  className={meu ? 'ml-auto w-full max-w-xl' : 'mr-auto w-full max-w-xl'}
+                >
+                  <Panel glow={meu ? 'blush' : 'iris'} className="p-4">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`h-1.5 w-1.5 rounded-full ${meu ? 'bg-blush-400' : 'bg-iris-400'}`}
+                      />
+                      <p
+                        className={`text-xs font-bold ${meu ? 'text-blush-300' : 'text-iris-300'}`}
+                      >
+                        {profile.names[m.from]}
+                      </p>
+                    </div>
+                    <p className="mt-2 whitespace-pre-wrap text-parch">{m.text}</p>
+                    <div className="mt-3 flex items-center gap-3 text-xs text-parch-faint">
+                      <span>
+                        {new Date(m.createdAt).toLocaleString('pt-BR', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </span>
+                      <motion.button
+                        whileTap={{ scale: 1.35 }}
+                        animate={pulseId === m.id ? { scale: [1, 1.45, 1] } : {}}
+                        onClick={(e) => curtir(m.id, e)}
+                        className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 transition-colors hover:border-blush-400/40 hover:text-blush-300"
+                      >
+                        ❤️ {m.hearts}
+                      </motion.button>
+                      <button
+                        onClick={() => remover(m.id)}
+                        className="ml-auto transition-colors hover:text-blush-300"
+                      >
+                        remover
+                      </button>
+                    </div>
+                  </Panel>
+                </motion.li>
+              )
+            })}
           </AnimatePresence>
         </ul>
       )}

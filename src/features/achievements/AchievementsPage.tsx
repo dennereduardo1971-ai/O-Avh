@@ -1,84 +1,138 @@
 import { motion } from 'framer-motion'
 import { useGame } from '../../context/GameContext'
 import { ACHIEVEMENTS } from '../../lib/achievements'
+import Panel from '../../components/ui/Panel'
+import SectionTitle from '../../components/ui/SectionTitle'
+import AnimatedNumber from '../../components/AnimatedNumber'
 
 export default function AchievementsPage() {
-  const { level, xp, streak, achievements, counts } = useGame()
+  const { level, xp, streak, achievements, counts, progress, xpIntoLevel, xpForNext } = useGame()
   const unlocked = new Set(achievements)
+  const pct = Math.round((achievements.length / ACHIEVEMENTS.length) * 100)
 
   return (
     <div>
-      <header className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-800">🏆 Conquistas</h1>
-        <p className="mt-1 text-slate-500">O progresso de vocês dois jogando o "Nosso Cantinho".</p>
-      </header>
+      <SectionTitle icon="🏆" title="Troféus" subtitle="A caminhada de vocês dois até aqui." />
 
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard icon="⭐" label="Nível" value={level} />
-        <StatCard icon="✨" label="XP total" value={xp} />
-        <StatCard icon="🔥" label="Sequência" value={`${streak} dia${streak === 1 ? '' : 's'}`} />
-        <StatCard icon="🥇" label="Desbloqueadas" value={`${achievements.length}/${ACHIEVEMENTS.length}`} />
+      {/* Vitrine do nível */}
+      <Panel glow="gold" className="mb-4 overflow-hidden p-6">
+        <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-center">
+          <div className="relative shrink-0">
+            <motion.div
+              initial={{ scale: 0.5, rotate: -25 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 15 }}
+              className="flex h-24 w-24 items-center justify-center rounded-3xl bg-gradient-to-br from-gold-300 to-gold-500 text-4xl font-black text-night-900 shadow-[0_16px_44px_-12px_rgba(251,191,36,0.95),inset_0_2px_0_rgba(255,255,255,0.6)]"
+            >
+              {level}
+            </motion.div>
+            <span className="absolute -inset-2 -z-10 rounded-3xl bg-gold-400/30 blur-xl" />
+            <p className="hud-label mt-2 text-center">nível</p>
+          </div>
+
+          <div className="w-full flex-1">
+            <div className="mb-2 flex items-end justify-between">
+              <p className="text-sm font-bold text-parch">Progresso para o nível {level + 1}</p>
+              <p className="hud-value text-xs text-parch-dim">
+                {xpIntoLevel}/{xpForNext} XP
+              </p>
+            </div>
+            <div className="h-3.5 overflow-hidden rounded-full border border-white/8 bg-night-950/70">
+              <motion.div
+                className="relative h-full rounded-full bg-gradient-to-r from-gold-400 via-blush-400 to-iris-400"
+                initial={{ width: 0 }}
+                animate={{ width: `${Math.max(2, progress * 100)}%` }}
+                transition={{ type: 'spring', stiffness: 80, damping: 20 }}
+              >
+                <span className="absolute inset-0 overflow-hidden rounded-full">
+                  <span className="absolute inset-y-0 w-1/3 bg-white/35 blur-[6px] animate-[sheen_2.6s_ease-in-out_infinite]" />
+                </span>
+              </motion.div>
+            </div>
+
+            <div className="mt-4 grid grid-cols-3 gap-3">
+              {[
+                { label: 'XP total', value: xp, tone: 'text-gold-300' },
+                { label: 'Sequência', value: streak, tone: 'text-orange-300' },
+                { label: 'Troféus', value: achievements.length, tone: 'text-iris-300' },
+              ].map((s) => (
+                <div
+                  key={s.label}
+                  className="rounded-xl border border-white/8 bg-white/4 px-3 py-2.5 text-center"
+                >
+                  <p className={`hud-value text-xl font-black ${s.tone}`}>
+                    <AnimatedNumber value={s.value} />
+                  </p>
+                  <p className="hud-label mt-0.5">{s.label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </Panel>
+
+      {/* Contadores por área */}
+      <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-7">
+        {[
+          { label: 'Recadinhos', value: counts.messages },
+          { label: 'Curtidas', value: counts.hearts },
+          { label: 'Missões', value: counts.tasksDone },
+          { label: 'Lançamentos', value: counts.financeEntries },
+          { label: 'Aventuras', value: counts.leisureDone },
+          { label: 'Jogadas', value: counts.funPlays },
+          { label: 'Respiros', value: counts.calmMinutes },
+        ].map((s) => (
+          <Panel key={s.label} glow="none" className="px-3 py-3 text-center">
+            <p className="hud-value text-lg font-black text-parch">{s.value}</p>
+            <p className="hud-label mt-0.5">{s.label}</p>
+          </Panel>
+        ))}
       </div>
 
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        <MiniStat label="Mensagens" value={counts.messages} />
-        <MiniStat label="Curtidas" value={counts.hearts} />
-        <MiniStat label="Tarefas feitas" value={counts.tasksDone} />
-        <MiniStat label="Lançamentos" value={counts.financeEntries} />
-        <MiniStat label="Programas feitos" value={counts.leisureDone} />
-        <MiniStat label="Jogadas" value={counts.funPlays} />
+      <div className="mb-3 flex items-center justify-between">
+        <p className="hud-label">Coleção</p>
+        <p className="hud-label">
+          {achievements.length}/{ACHIEVEMENTS.length} · {pct}%
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {ACHIEVEMENTS.map((a, idx) => {
           const isUnlocked = unlocked.has(a.id)
           return (
             <motion.div
               key={a.id}
-              initial={{ opacity: 0, y: 12 }}
+              initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.03 }}
-              whileHover={isUnlocked ? { scale: 1.03, rotate: -0.5 } : undefined}
-              className={`flex items-start gap-3 rounded-2xl border p-4 shadow-sm transition ${
-                isUnlocked
-                  ? 'border-amber-200 bg-gradient-to-br from-amber-50 to-fuchsia-50'
-                  : 'border-white bg-white/60 grayscale'
-              }`}
+              transition={{ delay: Math.min(idx * 0.028, 0.4) }}
             >
-              <span className={`text-3xl ${isUnlocked ? '' : 'opacity-30'}`} aria-hidden>
-                {isUnlocked ? a.icon : '🔒'}
-              </span>
-              <div>
-                <p className={`font-semibold ${isUnlocked ? 'text-slate-800' : 'text-slate-400'}`}>{a.title}</p>
-                <p className="text-sm text-slate-500">{a.description}</p>
-              </div>
+              <Panel
+                glow={isUnlocked ? 'gold' : 'none'}
+                lit={isUnlocked}
+                interactive={isUnlocked}
+                className={`flex h-full items-start gap-3.5 p-4 ${isUnlocked ? '' : 'opacity-55'}`}
+              >
+                <span
+                  className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border text-2xl ${
+                    isUnlocked
+                      ? 'border-gold-400/35 bg-gold-500/12 shadow-[0_0_20px_-6px_rgba(251,191,36,0.8)]'
+                      : 'border-white/8 bg-white/4 grayscale'
+                  }`}
+                  aria-hidden
+                >
+                  {isUnlocked ? a.icon : '🔒'}
+                </span>
+                <div className="min-w-0">
+                  <p className={`font-bold ${isUnlocked ? 'text-parch' : 'text-parch-faint'}`}>
+                    {a.title}
+                  </p>
+                  <p className="mt-0.5 text-sm leading-relaxed text-parch-dim">{a.description}</p>
+                </div>
+              </Panel>
             </motion.div>
           )
         })}
       </div>
-    </div>
-  )
-}
-
-function StatCard({ icon, label, value }: { icon: string; label: string; value: string | number }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      className="rounded-2xl border border-white bg-white/80 p-4 text-center shadow-sm"
-    >
-      <p className="text-2xl">{icon}</p>
-      <p className="mt-1 text-lg font-bold text-slate-800">{value}</p>
-      <p className="text-xs uppercase text-slate-400">{label}</p>
-    </motion.div>
-  )
-}
-
-function MiniStat({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-xl border border-rose-100 bg-white/70 p-3 text-center">
-      <p className="text-lg font-bold text-rose-600">{value}</p>
-      <p className="text-[11px] uppercase tracking-wide text-slate-400">{label}</p>
     </div>
   )
 }

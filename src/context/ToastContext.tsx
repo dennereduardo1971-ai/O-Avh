@@ -19,9 +19,11 @@ interface ToastContextValue {
 const ToastContext = createContext<ToastContextValue | null>(null)
 
 const STYLES: Record<ToastKind, string> = {
-  xp: 'bg-white/95 border-rose-200 text-rose-600',
-  achievement: 'bg-gradient-to-r from-amber-400 to-fuchsia-500 border-amber-300 text-white',
-  levelup: 'bg-gradient-to-r from-rose-500 to-fuchsia-600 border-rose-300 text-white',
+  xp: 'border-white/12 bg-night-800/90 text-parch shadow-[0_16px_40px_-16px_rgba(0,0,0,0.9)]',
+  achievement:
+    'border-gold-300/45 bg-gradient-to-r from-gold-500/90 to-blush-500/90 text-night-950 shadow-[0_16px_44px_-14px_rgba(251,191,36,0.85)]',
+  levelup:
+    'border-iris-300/45 bg-gradient-to-r from-blush-500/95 to-iris-500/95 text-white shadow-[0_16px_44px_-14px_rgba(167,139,250,0.9)]',
 }
 
 export function ToastProvider({ children }: { children: ReactNode }) {
@@ -47,7 +49,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, x: 60, scale: 0.9, transition: { duration: 0.25 } }}
               transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-              className={`pointer-events-auto flex items-center gap-3 rounded-2xl border px-4 py-3 shadow-lg backdrop-blur ${STYLES[t.kind]}`}
+              className={`pointer-events-auto flex items-center gap-3 rounded-2xl border px-4 py-3 backdrop-blur-xl ${STYLES[t.kind]}`}
             >
               <span className="text-2xl" aria-hidden>
                 {t.icon}

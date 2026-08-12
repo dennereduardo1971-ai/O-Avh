@@ -1,136 +1,151 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { useProfile } from '../context/ProfileContext'
-import XPBar from './XPBar'
+import AmbientBackground from './AmbientBackground'
+import PlayerHUD from './PlayerHUD'
+import { GLOW_HEX, type GlowTone } from './ui/Panel'
 
-const FOLDERS = [
-  { to: '/', label: 'Início', icon: '🏠', end: true },
-  { to: '/mensagens', label: 'Mensagens Fofas', icon: '💌', end: false },
-  { to: '/financas', label: 'Finanças', icon: '💰', end: false },
-  { to: '/tarefas', label: 'Tarefas Diárias', icon: '✅', end: false },
-  { to: '/lazer', label: 'Lazer', icon: '🎈', end: false },
-  { to: '/diversao', label: 'Diversão', icon: '🎲', end: false },
-  { to: '/conquistas', label: 'Conquistas', icon: '🏆', end: false },
+interface NavEntry {
+  to: string
+  label: string
+  icon: string
+  end: boolean
+  tone: Exclude<GlowTone, 'none'>
+}
+
+const PRIMARY: NavEntry[] = [
+  { to: '/', label: 'Painel', icon: '🛖', end: true, tone: 'blush' },
+  { to: '/mensagens', label: 'Recadinhos', icon: '💌', end: false, tone: 'blush' },
+  { to: '/financas', label: 'Tesouro', icon: '💎', end: false, tone: 'mint' },
+  { to: '/tarefas', label: 'Missões', icon: '⚔️', end: false, tone: 'iris' },
+  { to: '/lazer', label: 'Aventuras', icon: '🗺️', end: false, tone: 'gold' },
+  { to: '/diversao', label: 'Arcade', icon: '🕹️', end: false, tone: 'iris' },
+  { to: '/calma', label: 'Refúgio', icon: '🫧', end: false, tone: 'mint' },
+  { to: '/conquistas', label: 'Troféus', icon: '🏆', end: false, tone: 'gold' },
 ]
 
 const navContainer = {
   hidden: {},
-  show: { transition: { staggerChildren: 0.045, delayChildren: 0.05 } },
+  show: { transition: { staggerChildren: 0.04, delayChildren: 0.06 } },
 }
 const navItem = {
-  hidden: { opacity: 0, x: -12 },
+  hidden: { opacity: 0, x: -14 },
   show: { opacity: 1, x: 0 },
 }
 
+function NavRow({ entry }: { entry: NavEntry }) {
+  return (
+    <NavLink
+      to={entry.to}
+      end={entry.end}
+      className="group relative block"
+      style={{ '--glow': GLOW_HEX[entry.tone] } as React.CSSProperties}
+    >
+      {({ isActive }) => (
+        <span
+          className={`relative flex items-center gap-3 overflow-hidden rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors ${
+            isActive ? 'text-parch' : 'text-parch-dim hover:text-parch'
+          }`}
+        >
+          {isActive && (
+            <motion.span
+              layoutId="nav-active-pill"
+              transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+              className="absolute inset-0 -z-10 rounded-xl border border-[var(--glow)]/35 bg-[var(--glow)]/12 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]"
+            />
+          )}
+          {!isActive && (
+            <span className="absolute inset-0 -z-10 rounded-xl bg-white/0 transition-colors group-hover:bg-white/5" />
+          )}
+
+          {/* Marcador luminoso da entrada ativa */}
+          {isActive && (
+            <motion.span
+              layoutId="nav-active-bar"
+              transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+              className="absolute top-1/2 left-0 h-6 w-[3px] -translate-y-1/2 rounded-r-full bg-[var(--glow)] shadow-[0_0_12px_var(--glow)]"
+            />
+          )}
+
+          <motion.span
+            whileHover={{ scale: 1.22, rotate: -8 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 14 }}
+            className="text-lg leading-none"
+            aria-hidden
+          >
+            {entry.icon}
+          </motion.span>
+          {entry.label}
+        </span>
+      )}
+    </NavLink>
+  )
+}
+
 export default function Layout() {
-  const { profile, setActive } = useProfile()
   const location = useLocation()
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-rose-50 via-fuchsia-50 to-amber-50 text-slate-800">
-      <div className="mx-auto flex min-h-screen max-w-6xl flex-col md:flex-row">
-        <aside className="shrink-0 border-b border-rose-100 bg-white/70 backdrop-blur md:w-64 md:border-b-0 md:border-r">
-          <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex items-center gap-2 px-5 pt-6 pb-3"
-          >
-            <motion.span
-              className="text-2xl"
-              animate={{ scale: [1, 1.15, 1] }}
-              transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+    <div className="relative min-h-screen">
+      <AmbientBackground />
+
+      <div className="mx-auto flex min-h-screen w-full max-w-[1400px] flex-col lg:flex-row">
+        {/* ---------- Coluna de comando ---------- */}
+        <aside className="z-20 shrink-0 border-b border-white/8 bg-night-900/55 backdrop-blur-xl lg:w-[264px] lg:border-r lg:border-b-0">
+          <div className="sticky top-0 flex flex-col gap-4 py-5">
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center gap-3 px-5"
             >
-              💞
-            </motion.span>
-            <div>
-              <p className="text-lg font-bold leading-tight text-rose-700">Nosso Cantinho</p>
-              <p className="text-xs text-slate-500">organização a dois</p>
-            </div>
-          </motion.div>
-
-          <XPBar />
-
-          <motion.nav
-            variants={navContainer}
-            initial="hidden"
-            animate="show"
-            className="flex flex-wrap gap-1 px-3 pb-3 md:flex-col md:pb-6"
-          >
-            {FOLDERS.map((f) => (
-              <motion.div key={f.to} variants={navItem}>
-                <NavLink
-                  to={f.to}
-                  end={f.end}
-                  className={({ isActive }) =>
-                    `relative flex items-center gap-2 overflow-hidden rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
-                      isActive
-                        ? 'bg-rose-500 text-white shadow'
-                        : 'text-slate-600 hover:bg-rose-100'
-                    }`
-                  }
+              <div className="relative">
+                <motion.span
+                  className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/14 bg-gradient-to-br from-blush-500/35 to-iris-500/35 text-xl shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]"
+                  animate={{ scale: [1, 1.07, 1] }}
+                  transition={{ duration: 3.4, repeat: Infinity, ease: 'easeInOut' }}
+                  aria-hidden
                 >
-                  {({ isActive }) => (
-                    <>
-                      {isActive && (
-                        <motion.span
-                          layoutId="nav-active"
-                          className="absolute inset-0 -z-10 rounded-xl bg-rose-500"
-                          transition={{ type: 'spring', stiffness: 400, damping: 32 }}
-                        />
-                      )}
-                      <motion.span whileHover={{ scale: 1.2, rotate: -8 }} aria-hidden>
-                        {f.icon}
-                      </motion.span>
-                      {f.label}
-                    </>
-                  )}
-                </NavLink>
-              </motion.div>
-            ))}
-            <motion.div variants={navItem}>
-              <NavLink
-                to="/config"
-                className={({ isActive }) =>
-                  `flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition ${
-                    isActive ? 'bg-rose-500 text-white shadow' : 'text-slate-600 hover:bg-rose-100'
-                  }`
-                }
-              >
-                <span aria-hidden>⚙️</span>
-                Configurações
-              </NavLink>
+                  💞
+                </motion.span>
+                <span className="absolute -inset-1 -z-10 rounded-2xl bg-blush-500/25 blur-lg" />
+              </div>
+              <div>
+                <p className="text-[15px] leading-tight font-black tracking-tight text-parch">
+                  Nosso Cantinho
+                </p>
+                <p className="hud-label mt-0.5">refúgio a dois</p>
+              </div>
             </motion.div>
-          </motion.nav>
 
-          <div className="mx-3 mb-6 rounded-xl border border-rose-100 bg-rose-50/80 p-3 md:mb-0">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-rose-400">
-              Quem está aqui?
-            </p>
-            <div className="flex gap-2">
-              {(['p1', 'p2'] as const).map((key) => (
-                <motion.button
-                  key={key}
-                  whileTap={{ scale: 0.94 }}
-                  onClick={() => setActive(key)}
-                  className={`flex-1 rounded-lg px-2 py-1.5 text-sm font-medium transition ${
-                    profile.active === key
-                      ? 'bg-rose-500 text-white'
-                      : 'bg-white text-slate-600 hover:bg-rose-100'
-                  }`}
-                >
-                  {profile.names[key]}
-                </motion.button>
+            <PlayerHUD />
+
+            <motion.nav
+              variants={navContainer}
+              initial="hidden"
+              animate="show"
+              className="grid grid-cols-2 gap-1 px-3 lg:grid-cols-1"
+            >
+              {PRIMARY.map((entry) => (
+                <motion.div key={entry.to} variants={navItem}>
+                  <NavRow entry={entry} />
+                </motion.div>
               ))}
-            </div>
+              <motion.div variants={navItem} className="col-span-2 lg:col-span-1">
+                <div className="my-1 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                <NavRow
+                  entry={{ to: '/config', label: 'Ajustes', icon: '⚙️', end: false, tone: 'iris' }}
+                />
+              </motion.div>
+            </motion.nav>
           </div>
         </aside>
 
-        <main className="flex-1 overflow-hidden px-4 py-6 sm:px-6 md:px-8 md:py-8">
+        {/* ---------- Área de conteúdo ---------- */}
+        <main className="min-w-0 flex-1 px-4 py-7 sm:px-7 lg:px-10 lg:py-10">
           <motion.div
             key={location.pathname}
-            initial={{ opacity: 0, y: 14 }}
+            initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.22, ease: 'easeOut' }}
+            transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
           >
             <Outlet />
           </motion.div>

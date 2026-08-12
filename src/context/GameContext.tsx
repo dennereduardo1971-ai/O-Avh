@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useRef, type ReactNode } from 'react'
 import { useLocalStorage } from '../lib/storage'
 import { levelInfo, todayISO, yesterdayISO } from '../lib/gameMath'
-import { ACHIEVEMENTS, type GameCounts } from '../lib/achievements'
+import { ACHIEVEMENTS, EMPTY_COUNTS, type GameCounts } from '../lib/achievements'
 import { useToast } from './ToastContext'
 import { confettiBurst } from '../lib/confetti'
 
@@ -15,7 +15,7 @@ interface GameState {
 
 const DEFAULT_STATE: GameState = {
   xp: 0,
-  counts: { messages: 0, hearts: 0, tasksDone: 0, financeEntries: 0, leisureDone: 0, funPlays: 0 },
+  counts: EMPTY_COUNTS,
   achievements: [],
   lastActiveDate: '',
   streak: 0,
@@ -46,8 +46,20 @@ const GameContext = createContext<GameContextValue | null>(null)
 export function GameProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useLocalStorage<GameState>('casal:game', DEFAULT_STATE)
   const toast = useToast()
-  const notifiedAchievements = useRef(new Set<string>())
+  // Estes dois refs precisam já nascer preenchidos com o que veio do
+  // localStorage. Se fossem semeados num useEffect, o efeito que anuncia
+  // conquistas rodaria antes (ordem de declaração) e o app comemoraria de
+  // novo, com confete, tudo o que o casal já tinha ganhado — a cada abertura.
+  const notifiedAchievements = useRef<Set<string> | null>(null)
+  if (notifiedAchievements.current === null) {
+    notifiedAchievements.current = new Set(state.achievements)
+  }
+  const notified = notifiedAchievements.current
+
   const notifiedLevel = useRef<number | null>(null)
+  if (notifiedLevel.current === null) {
+    notifiedLevel.current = levelInfo(state.xp).level
+  }
 
   // Atualiza a sequência de dias seguidos usando o app (streak).
   useEffect(() => {
@@ -62,23 +74,25 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   const info = useMemo(() => levelInfo(state.xp), [state.xp])
 
+  // Saves de versões anteriores não têm os contadores mais novos. Preencher
+  // com zero aqui evita `undefined + 1 === NaN` ao incrementar.
+  const counts = useMemo<GameCounts>(() => ({ ...EMPTY_COUNTS, ...state.counts }), [state.counts])
+
   // Detecta level up e conquistas novas de forma reativa (evita duplicar
   // efeitos colaterais em cliques concorrentes).
   useEffect(() => {
-    if (notifiedLevel.current === null) {
-      notifiedLevel.current = info.level
-    } else if (info.level > notifiedLevel.current) {
+    if (notifiedLevel.current !== null && info.level > notifiedLevel.current) {
       notifiedLevel.current = info.level
       toast.push({ kind: 'levelup', title: `Subiram para o nível ${info.level}! 🎉`, icon: '⭐' })
       confettiBurst()
     }
 
     const novas = ACHIEVEMENTS.filter(
-      (a) => !notifiedAchievements.current.has(a.id) && a.check(state.counts, info.level, state.streak),
+      (a) => !notified.has(a.id) && a.check(counts, info.level, state.streak),
     )
     if (novas.length === 0) return
 
-    novas.forEach((a) => notifiedAchievements.current.add(a.id))
+    novas.forEach((a) => notified.add(a.id))
     setState((prev) => ({
       ...prev,
       achievements: Array.from(new Set([...prev.achievements, ...novas.map((a) => a.id)])),
@@ -88,21 +102,15 @@ export function GameProvider({ children }: { children: ReactNode }) {
     })
     confettiBurst()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.counts, state.streak, info.level])
-
-  // Já vindo do localStorage: marca conquistas salvas como "já notificadas".
-  useEffect(() => {
-    state.achievements.forEach((id) => notifiedAchievements.current.add(id))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [counts, state.streak, info.level])
 
   const trigger = (event: GameEvent) => {
     setState((prev) => {
-      const counts = { ...prev.counts }
+      const next = { ...EMPTY_COUNTS, ...prev.counts }
       if (event.countKey) {
-        counts[event.countKey] = Math.max(0, counts[event.countKey] + (event.countDelta ?? 1))
+        next[event.countKey] = Math.max(0, next[event.countKey] + (event.countDelta ?? 1))
       }
-      return { ...prev, xp: Math.max(0, prev.xp + event.xp), counts }
+      return { ...prev, xp: Math.max(0, prev.xp + event.xp), counts: next }
     })
     if (event.xp > 0) {
       toast.push({ kind: 'xp', title: `+${event.xp} XP`, subtitle: event.xpLabel, icon: event.xpIcon ?? '✨' })
@@ -118,7 +126,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         xpForNext: info.xpForNext,
         progress: info.progress,
         streak: state.streak,
-        counts: state.counts,
+        counts,
         achievements: state.achievements,
         trigger,
       }}

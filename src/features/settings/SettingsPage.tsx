@@ -1,5 +1,9 @@
 import { useState } from 'react'
+import { motion } from 'framer-motion'
 import { useProfile } from '../../context/ProfileContext'
+import Panel from '../../components/ui/Panel'
+import GameButton from '../../components/ui/GameButton'
+import SectionTitle from '../../components/ui/SectionTitle'
 
 export default function SettingsPage() {
   const { profile, setName } = useProfile()
@@ -11,48 +15,42 @@ export default function SettingsPage() {
     setName('p1', p1.trim())
     setName('p2', p2.trim())
     setSalvo(true)
-    setTimeout(() => setSalvo(false), 2000)
+    setTimeout(() => setSalvo(false), 2200)
   }
 
   return (
     <div>
-      <header className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-800">⚙️ Configurações</h1>
-        <p className="mt-1 text-slate-500">Ajustem os nomes de vocês dois no aplicativo.</p>
-      </header>
+      <SectionTitle icon="⚙️" title="Ajustes" subtitle="Como o app chama vocês dois." />
 
-      <div className="max-w-md rounded-2xl border border-white bg-white/80 p-5 shadow-sm">
-        <label className="mb-1 block text-xs font-medium uppercase text-slate-400">
-          Nome da pessoa 1
-        </label>
-        <input
-          value={p1}
-          onChange={(e) => setP1(e.target.value)}
-          className="mb-4 w-full rounded-lg border border-rose-100 bg-rose-50/40 p-2 text-sm outline-none focus:border-rose-300"
-        />
+      <Panel glow="iris" className="max-w-lg p-6">
+        <label className="hud-label mb-1.5 block">Pessoa 1</label>
+        <input value={p1} onChange={(e) => setP1(e.target.value)} className="field mb-4" />
 
-        <label className="mb-1 block text-xs font-medium uppercase text-slate-400">
-          Nome da pessoa 2
-        </label>
-        <input
-          value={p2}
-          onChange={(e) => setP2(e.target.value)}
-          className="mb-4 w-full rounded-lg border border-rose-100 bg-rose-50/40 p-2 text-sm outline-none focus:border-rose-300"
-        />
+        <label className="hud-label mb-1.5 block">Pessoa 2</label>
+        <input value={p2} onChange={(e) => setP2(e.target.value)} className="field mb-5" />
 
-        <button
-          onClick={salvar}
-          className="rounded-lg bg-rose-500 px-4 py-2 text-sm font-medium text-white shadow hover:bg-rose-600"
-        >
-          Salvar
-        </button>
-        {salvo && <span className="ml-3 text-sm text-emerald-600">Salvo! ✅</span>}
-      </div>
+        <div className="flex items-center gap-3">
+          <GameButton onClick={salvar}>Salvar</GameButton>
+          {salvo && (
+            <motion.span
+              initial={{ opacity: 0, x: -8 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="text-sm font-semibold text-mint-300"
+            >
+              Salvo! ✅
+            </motion.span>
+          )}
+        </div>
+      </Panel>
 
-      <p className="mt-6 max-w-md text-xs text-slate-400">
-        Todos os dados deste app (mensagens, finanças, tarefas, lazer) ficam salvos apenas neste
-        navegador, no armazenamento local do dispositivo — nada é enviado para a internet.
-      </p>
+      <Panel glow="none" className="mt-4 max-w-lg p-5">
+        <p className="hud-label mb-2">Privacidade</p>
+        <p className="text-sm leading-relaxed text-parch-dim">
+          Tudo o que vocês escrevem aqui — recadinhos, finanças, missões, aventuras e humor —
+          fica salvo somente neste navegador, no armazenamento local do aparelho. Nada é
+          enviado para nenhum servidor.
+        </p>
+      </Panel>
     </div>
   )
 }

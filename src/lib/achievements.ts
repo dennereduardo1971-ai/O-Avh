@@ -5,6 +5,17 @@ export interface GameCounts {
   financeEntries: number
   leisureDone: number
   funPlays: number
+  calmMinutes: number
+}
+
+export const EMPTY_COUNTS: GameCounts = {
+  messages: 0,
+  hearts: 0,
+  tasksDone: 0,
+  financeEntries: 0,
+  leisureDone: 0,
+  funPlays: 0,
+  calmMinutes: 0,
 }
 
 export interface Achievement {
@@ -85,6 +96,20 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Joguem 10 vezes na pasta Diversão.',
     icon: '🎲',
     check: (c) => c.funPlays >= 10,
+  },
+  {
+    id: 'first_breath',
+    title: 'Primeiro respiro',
+    description: 'Complete um ciclo de respiração guiada no Refúgio.',
+    icon: '🫧',
+    check: (c) => c.calmMinutes >= 1,
+  },
+  {
+    id: 'calm_10',
+    title: 'Mente serena',
+    description: 'Complete 10 sessões de respiração guiada.',
+    icon: '🧘',
+    check: (c) => c.calmMinutes >= 10,
   },
   {
     id: 'streak_3',
