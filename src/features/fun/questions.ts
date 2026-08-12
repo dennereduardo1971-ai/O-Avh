@@ -1,0 +1,17 @@
+export const PERGUNTAS_DO_DIA = [
+  'Qual foi o momento mais engraçado que já vivemos juntos?',
+  'Se pudéssemos viajar para qualquer lugar amanhã, para onde iríamos?',
+  'Qual é a sua lembrança favorita de nós dois?',
+  'O que eu faço que te faz sorrir sem perceber?',
+  'Se ganhássemos na loteria, qual seria nosso primeiro programa?',
+  'Qual comida você quer que a gente aprenda a cozinhar juntos?',
+  'Qual filme ou série a gente devia maratonar esse mês?',
+  'O que você mais admira em mim hoje?',
+  'Qual seria o nosso encontro dos sonhos?',
+  'Se a gente pudesse ter um pet novo, qual seria?',
+  'Qual tradição a gente devia criar só nossa?',
+  'O que faz você se sentir mais amado(a)?',
+  'Qual foi a melhor surpresa que já te fiz?',
+  'Praia ou montanha para as próximas férias?',
+  'Qual música lembra a nossa história?',
+]
