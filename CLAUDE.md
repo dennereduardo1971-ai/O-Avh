@@ -249,9 +249,14 @@ Playwright não está no `package.json`; instale sob demanda com
   `artifact.html`, sirva **sem** `-s`.
 - Locators que dependem de estado (ex.: `[aria-label="Estourar bolha"]`)
   re-indexam a cada clique — o alvo "n" muda de identidade no meio do laço.
-- **Este sandbox bloqueia `github.io`** e o blob de artifacts do Actions no proxy
-  de rede. Não dá para verificar o deploy daqui; confirme pelos logs do Actions
-  (`mcp__github__get_job_logs`) e peça ao usuário para abrir.
+- **Este sandbox bloqueia `github.io`** e o blob de artifacts do Actions
+  (`*.blob.core.windows.net`, usado para baixar artifacts de workflow) no proxy
+  de rede. Não dá para verificar o deploy nem inspecionar o conteúdo publicado
+  daqui. Confirme pelos logs do Actions (`mcp__github__get_job_logs`) que o
+  build/deploy passou, e para o resultado visual — inclusive se as chaves de
+  sincronização "pegaram" — peça ao usuário para checar um sinal na própria UI
+  (ex.: Ajustes mostrar o login em vez de "não configurada") em vez de tentar
+  baixar o artifact e grepar.
 
 ---
 
@@ -279,14 +284,24 @@ projeto, rodar o `esquema.sql`, criar a conta única do casal, gerar VAPID com
   maior (não o mais recente), união das conquistas, e `active` do perfil não
   viajando entre aparelhos.
 
-### O que ainda não foi testado
+### Contra o Supabase real
 
-**Nada contra um Supabase real** — dois celulares conectados de verdade, tempo
-real chegando, e push no bolso. Depende de o usuário concluir o
-`CONFIGURACAO.md`. Se der problema, os pontos de inspeção estão na seção "Se
-algo não funcionar" daquele arquivo.
+O usuário concluiu o `CONFIGURACAO.md` (projeto criado, `esquema.sql` rodado,
+conta do casal criada, secrets do GitHub preenchidos) e **confirmou que a
+sincronização está funcionando** — a tela de Ajustes passou a mostrar o login
+em vez de "não configurada", e ele testou conectar e sincronizar. Isso foi
+verificado pelo usuário, não por mim: eu não tenho como abrir o site publicado
+nem inspecionar o Supabase dele a partir daqui (ver a limitação de rede logo
+abaixo).
 
-> Os testes acima foram feitos com bancada temporária (Playwright sob demanda +
-> um bundle esbuild com `localStorage` de mentira) e removidos depois, seguindo
-> a convenção do repo. Não há suíte de testes permanente — vale propor uma
-> (vitest) se a lógica de mescla for mexida de novo.
+**Notificações push (passos 5–7 do `CONFIGURACAO.md`) ainda não foram
+confirmadas** — exigem gerar VAPID, publicar a Edge Function e ligar o webhook,
+passos que não foram mencionados como concluídos. Se o usuário pedir para
+mexer em algo de push, pergunte se esses passos já foram feitos antes de supor
+que sim.
+
+> Os testes de modo local e de mescla foram feitos com bancada temporária
+> (Playwright sob demanda + um bundle esbuild com `localStorage` de mentira) e
+> removidos depois, seguindo a convenção do repo. Não há suíte de testes
+> permanente — vale propor uma (vitest) se a lógica de mescla for mexida de
+> novo.
