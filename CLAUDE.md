@@ -187,18 +187,32 @@ globalmente em `index.css` — não adicione animação que ignore isso.
 
 ## Som (Refúgio)
 
-`lib/audio.ts` sintetiza tudo na hora pela Web Audio API. **Não existe arquivo
-de áudio no projeto, e não deve passar a existir:** um mp3 de ambiente pesaria
-mais que o app inteiro, teria de entrar no cache do `sw.js` (senão o offline
-quebra) e ainda ser embutido em base64 no artifact de HTML único. Sintetizado,
-custa zero byte e o "ploc" sai no mesmo instante do toque.
+`lib/audio.ts` funciona em **dois níveis**: se houver gravação em
+`src/assets/sons/` (`ploc`, `gota`, `agua`, `respirar` — `.mp3`/`.ogg`/`.wav`),
+ela toca; se não houver, o som é sintetizado na hora pela Web Audio API. Hoje a
+pasta está vazia, então tudo é sintetizado. Instruções para quem for adicionar
+arquivos estão em `src/assets/sons/LEIA-ME.md`.
 
-| Som | Onde | Como é feito |
+A lista de arquivos vem de `import.meta.glob` — montada **no build**, não por
+tentativa e erro. Isso é o que evita 404 no console de quem abre o app: sem
+arquivo, a lista nasce vazia e nenhuma requisição sai. Em compensação, arquivo
+novo só vale depois de rebuild (o que é automático no push).
+
+A síntese não é plano B: um mp3 de ambiente pesa mais que o app inteiro, entra
+no cache do `sw.js` e **não existe dentro do artifact de HTML único** — lá o som
+sempre cai para o sintetizado, junto com as outras limitações do artifact.
+
+| Som | Onde | Sintetizado como |
 |---|---|---|
 | `ploc()` | plástico bolha | seno despencando de agudo a grave + estalo de ruído branco |
 | `gota(altura)` | lago de ondas | seno **subindo** rápido; tocar mais em cima soa mais agudo |
 | `iniciarAmbiente()` | lago de ondas | ruído marrom em laço, filtro grave aberto/fechado por um LFO de 0,08 Hz |
 | `tomDeRespiracao(fase, seg, alto)` | esfera da respiração | seno + harmônico uma oitava acima; sobe ao inspirar, desce ao soltar |
+
+Com gravação, a variação que a síntese faz na frequência passa a ser feita na
+**velocidade de reprodução** (`playbackRate`): o tom de cada bolha, o agudo da
+gota conforme a altura do toque e a subida/descida da respiração. Na respiração
+a variação é de ±6% de propósito — mais que isso soa como fita acelerada.
 
 Decisões que importam:
 
@@ -218,10 +232,18 @@ Decisões que importam:
   ninguém perceber.
 - Tudo passa por `pronto()`, que devolve `null` com o som desligado: nenhuma
   chamada precisa checar antes.
+- **O ambiente espera as gravações carregarem antes de começar** (`pedidoAmbiente`
+  invalida pedidos em voo). É o único som que começa uma vez só e fica: se
+  partisse antes do download terminar, ficava preso no sintetizado para sempre.
+  Ploc, gota e respiração se corrigem sozinhos no toque/passo seguinte — este
+  não teria segunda chance. O bug existiu e foi pego no teste de navegador.
 
-Níveis medidos na saída (pico): ploc 0,30 · gota 0,25 · respiração 0,10 ·
-ambiente 0,02. O ambiente fica ~12× abaixo do resto de propósito — é cama, não
-protagonista. Se mexer nos ganhos, confira que nada passe de 1,0 (satura).
+Níveis do sintetizado, medidos na saída (pico): ploc 0,30 · gota 0,25 ·
+respiração 0,10 · ambiente 0,02. O ambiente fica ~12× abaixo do resto de
+propósito — é cama, não protagonista. Se mexer nos ganhos, confira que nada
+passe de 1,0 (satura). Gravação vem com o volume que vier: o ganho de cada uma
+está em `tocarAmostra(nome, taxa, ganho)` e nos ramps de `iniciarAmbiente` /
+`tomDeRespiracao`, e vai precisar de ajuste no dia em que os arquivos entrarem.
 
 ---
 
