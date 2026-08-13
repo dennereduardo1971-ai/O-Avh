@@ -34,8 +34,9 @@ componente **e** constante (os quatro contexts, `Panel`, `MoodCheck`,
 | GitHub Pages | https://dennereduardo1971-ai.github.io/O-Avh/ | sozinho, a cada push na branch |
 | Artifact (Claude) | `claude.ai/code/artifact/bb739a16-7aa6-4b77-8c3c-027364b5235f` | só ao republicar |
 
-**Pages** roda via `.github/workflows/deploy.yml`. O Pages já está habilitado no
-repo; nenhum passo manual é necessário. O usuário já confirmou que o link abre.
+**Pages** roda via `.github/workflows/deploy.yml`. Em *Settings → Pages*, o
+**Source precisa ser "GitHub Actions"** — se voltar para "Deploy from a branch",
+o site quebra de um jeito difícil de diagnosticar (ver armadilha 7).
 
 **Artifact**: `node scripts/build-artifact.mjs` (após `npm run build`) gera
 `artifact.html`, um HTML único com JS/CSS inline. É gitignorado — é build, não
@@ -72,6 +73,7 @@ src/
     achievements.ts      ACHIEVEMENTS, GameCounts, EMPTY_COUNTS
     confetti.ts          confettiPop (pequeno) / confettiBurst (grande)
     pwa.ts               instalação no celular + registro do service worker
+    audio.ts             sons do Refúgio, sintetizados (sem arquivo de áudio)
     sync/
       config.ts          lê as VITE_*, SYNC_CONFIGURADO, id do aparelho
       areas.ts           adaptadores: valor guardado <-> lista de itens
@@ -106,7 +108,7 @@ tela muda e nada sai do aparelho.
 
 Chaves do localStorage: `casal:perfil` · `casal:game` · `casal:mensagens` ·
 `casal:tarefas` · `casal:financas` · `casal:lazer` · `casal:humor` ·
-`casal:fila` · `casal:fila-docs` · `casal:dispositivo`.
+`casal:fila` · `casal:fila-docs` · `casal:dispositivo` · `casal:som`.
 
 `storage.ts` mantém **um valor por chave em memória**, com ouvintes. Isso não é
 enfeite: antes cada `useLocalStorage` tinha a própria cópia e duas telas lendo a
@@ -183,6 +185,46 @@ globalmente em `index.css` — não adicione animação que ignore isso.
 
 ---
 
+## Som (Refúgio)
+
+`lib/audio.ts` sintetiza tudo na hora pela Web Audio API. **Não existe arquivo
+de áudio no projeto, e não deve passar a existir:** um mp3 de ambiente pesaria
+mais que o app inteiro, teria de entrar no cache do `sw.js` (senão o offline
+quebra) e ainda ser embutido em base64 no artifact de HTML único. Sintetizado,
+custa zero byte e o "ploc" sai no mesmo instante do toque.
+
+| Som | Onde | Como é feito |
+|---|---|---|
+| `ploc()` | plástico bolha | seno despencando de agudo a grave + estalo de ruído branco |
+| `gota(altura)` | lago de ondas | seno **subindo** rápido; tocar mais em cima soa mais agudo |
+| `iniciarAmbiente()` | lago de ondas | ruído marrom em laço, filtro grave aberto/fechado por um LFO de 0,08 Hz |
+| `tomDeRespiracao(fase, seg, alto)` | esfera da respiração | seno + harmônico uma oitava acima; sobe ao inspirar, desce ao soltar |
+
+Decisões que importam:
+
+- **Começa desligado, sempre** (`casal:som`, padrão `false`). Som que começa
+  sozinho é o oposto de anti-estresse — e navegador nenhum libera áudio antes de
+  um gesto do usuário, então o botão do `SomToggle` é o que destrava o
+  `AudioContext`.
+- **Preferência é do aparelho, não do casal.** Não sincroniza, pela mesma razão
+  do `active` do perfil: um ligaria o som no celular do outro.
+- **O ruído do ambiente tem os últimos 0,25 s misturados com os primeiros.** Sem
+  essa emenda o laço estala a cada 6 s — um clique periódico bem no som feito
+  para acalmar.
+- **A subida de tom da gota é o que soa como água.** Descendo vira bolha
+  estourando; é literalmente o mesmo desenho do `ploc()` ao contrário.
+- **A fase da respiração é campo próprio (`fase`) no `BreathStep`**, não o
+  `label` reaproveitado — mudar o texto da tela não pode calar o som sem
+  ninguém perceber.
+- Tudo passa por `pronto()`, que devolve `null` com o som desligado: nenhuma
+  chamada precisa checar antes.
+
+Níveis medidos na saída (pico): ploc 0,30 · gota 0,25 · respiração 0,10 ·
+ambiente 0,02. O ambiente fica ~12× abaixo do resto de propósito — é cama, não
+protagonista. Se mexer nos ganhos, confira que nada passe de 1,0 (satura).
+
+---
+
 ## PWA e notificações
 
 - `manifest.webmanifest` + `sw.js` (em `public/`, copiados crus — nada ali pode
@@ -231,6 +273,23 @@ clique (comum ao concluir uma missão: muda a tarefa **e** dá XP) fariam o
 segundo sobrescrever o primeiro. `useSyncedArea` lê `valorAtual(chave)` na hora
 de gravar, em vez de usar o valor capturado no render.
 
+**7. Dois deploys disputando o Pages = tela preta intermitente.** O *Source* do
+Pages estava em "Deploy from a branch", então o workflow `pages-build-deployment`
+(do próprio GitHub, invisível no `.github/`) publicava o **repositório cru** no
+mesmo segundo do nosso `deploy.yml`. Quem terminasse por último ganhava. Quando
+ganhava o do GitHub, o navegador recebia o `index.html` de desenvolvimento, que
+aponta para `/src/main.tsx` (só existe compilado) e busca o manifesto na raiz do
+domínio em vez de `/O-Avh/` — nenhum JS carregava, a página ficava vazia e, com
+`color-scheme: dark`, vazio aparece **preto liso**. Sintomas que despistam: os
+dois workflows dizem *success*, reproduz em aba anônima (não é cache) e às vezes
+funciona (quando o nosso ganha a corrida). Diagnóstico rápido: se o console
+acusar 404 em `main.tsx`, é isto — nenhum build de produção referencia esse
+arquivo. Conserto: *Settings → Pages → Source → **GitHub Actions***.
+
+Sinal de alerta para o futuro: `actions_list` com `method: list_workflows`
+deve mostrar **só** "Deploy no GitHub Pages". Se `pages-build-deployment`
+reaparecer, o Source voltou para branch.
+
 ---
 
 ## Testando no navegador (aprendido na marra)
@@ -249,6 +308,14 @@ Playwright não está no `package.json`; instale sob demanda com
   `artifact.html`, sirva **sem** `-s`.
 - Locators que dependem de estado (ex.: `[aria-label="Estourar bolha"]`)
   re-indexam a cada clique — o alvo "n" muda de identidade no meio do laço.
+- **Dá para testar som sem ouvir**, e vale a pena, porque o TypeScript não vê
+  nada disso. Duas técnicas, ambas via `page.addInitScript`: (1) espionar
+  `OscillatorNode.prototype.start` / `AudioBufferSourceNode.prototype.start`
+  para contar o que disparou; (2) para provar que **sai som** e não silêncio,
+  embrulhar `AudioNode.prototype.connect` e, quando o destino for o
+  `AudioDestinationNode`, enfiar um `AnalyserNode` no caminho — aí
+  `getFloatTimeDomainData` dá o pico real da saída. Chromium headless roda a
+  Web Audio API normalmente, sem placa de som.
 - **Este sandbox bloqueia `github.io`** e o blob de artifacts do Actions
   (`*.blob.core.windows.net`, usado para baixar artifacts de workflow) no proxy
   de rede. Não dá para verificar o deploy nem inspecionar o conteúdo publicado

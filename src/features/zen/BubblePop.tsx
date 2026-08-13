@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
+import { ploc } from '../../lib/audio'
 
 const TOTAL = 84
 
@@ -16,6 +17,7 @@ export default function BubblePop({ onPop }: { onPop?: () => void }) {
   const estourar = (i: number) => {
     if (popped.has(i)) return
     buzz()
+    ploc()
     onPop?.()
     setPopped((prev) => {
       const next = new Set(prev)

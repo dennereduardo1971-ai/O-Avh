@@ -6,6 +6,7 @@ import BreathingOrb from './BreathingOrb'
 import BubblePop from './BubblePop'
 import ZenPond from './ZenPond'
 import MoodCheck from './MoodCheck'
+import SomToggle from './SomToggle'
 
 export default function ZenPage() {
   const { trigger } = useGame()
@@ -27,6 +28,7 @@ export default function ZenPage() {
         icon="🫧"
         title="Refúgio"
         subtitle="Um canto sem cobrança. Respire, estoure bolhas, mexa na água."
+        right={<SomToggle />}
       />
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">

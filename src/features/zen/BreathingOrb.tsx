@@ -1,12 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import GameButton from '../../components/ui/GameButton'
+import { pararRespiracao, tomDeRespiracao, type FaseDaRespiracao } from '../../lib/audio'
 
 interface BreathStep {
   label: string
   seconds: number
   /** Tamanho que a esfera assume ao final do passo. */
   scale: number
+  /**
+   * Qual som guia o passo. É campo próprio, e não o `label` reaproveitado:
+   * mudar o texto da tela um dia não pode calar o som sem ninguém perceber.
+   */
+  fase: FaseDaRespiracao
 }
 
 interface Pattern {
@@ -25,8 +31,8 @@ export const PATTERNS: Pattern[] = [
     name: 'Calma 4-6',
     hint: 'Expiração mais longa que a inspiração — o jeito mais rápido de baixar a agitação.',
     steps: [
-      { label: 'Inspire', seconds: 4, scale: BIG },
-      { label: 'Solte', seconds: 6, scale: SMALL },
+      { label: 'Inspire', seconds: 4, scale: BIG, fase: 'inspire' },
+      { label: 'Solte', seconds: 6, scale: SMALL, fase: 'solte' },
     ],
   },
   {
@@ -34,10 +40,10 @@ export const PATTERNS: Pattern[] = [
     name: 'Quadrado 4-4-4-4',
     hint: 'Usada para recuperar o foco sob pressão. Quatro tempos iguais.',
     steps: [
-      { label: 'Inspire', seconds: 4, scale: BIG },
-      { label: 'Segure', seconds: 4, scale: BIG },
-      { label: 'Solte', seconds: 4, scale: SMALL },
-      { label: 'Segure', seconds: 4, scale: SMALL },
+      { label: 'Inspire', seconds: 4, scale: BIG, fase: 'inspire' },
+      { label: 'Segure', seconds: 4, scale: BIG, fase: 'segure' },
+      { label: 'Solte', seconds: 4, scale: SMALL, fase: 'solte' },
+      { label: 'Segure', seconds: 4, scale: SMALL, fase: 'segure' },
     ],
   },
   {
@@ -45,9 +51,9 @@ export const PATTERNS: Pattern[] = [
     name: 'Sono 4-7-8',
     hint: 'A preferida para desacelerar antes de dormir.',
     steps: [
-      { label: 'Inspire', seconds: 4, scale: BIG },
-      { label: 'Segure', seconds: 7, scale: BIG },
-      { label: 'Solte', seconds: 8, scale: SMALL },
+      { label: 'Inspire', seconds: 4, scale: BIG, fase: 'inspire' },
+      { label: 'Segure', seconds: 7, scale: BIG, fase: 'segure' },
+      { label: 'Solte', seconds: 8, scale: SMALL, fase: 'solte' },
     ],
   },
 ]
@@ -71,10 +77,18 @@ export default function BreathingOrb({ onCycle }: { onCycle?: (total: number) =>
     onCycleRef.current = onCycle
   }, [onCycle])
 
+  // Silencia ao pausar e ao sair da tela — sem isto o tom do passo em curso
+  // continuaria tocando sozinho depois do ⏸.
+  useEffect(() => {
+    if (!running) pararRespiracao()
+  }, [running])
+  useEffect(() => pararRespiracao, [])
+
   // Relógio do exercício: conta o passo atual e avança quando zera.
   useEffect(() => {
     if (!running) return
     setRemaining(step.seconds)
+    tomDeRespiracao(step.fase, step.seconds, step.scale === BIG)
 
     const tick = window.setInterval(() => {
       setRemaining((r) => (r > 1 ? r - 1 : 0))
@@ -98,7 +112,7 @@ export default function BreathingOrb({ onCycle }: { onCycle?: (total: number) =>
       window.clearInterval(tick)
       window.clearTimeout(advance)
     }
-  }, [running, stepIndex, pattern, step.seconds])
+  }, [running, stepIndex, pattern, step])
 
   const trocarPadrao = (id: string) => {
     setPatternId(id)

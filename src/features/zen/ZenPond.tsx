@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { generateId } from '../../lib/storage'
+import { gota, iniciarAmbiente, pararAmbiente, useSom } from '../../lib/audio'
 
 interface Ripple {
   id: string
@@ -14,14 +15,22 @@ interface Ripple {
  */
 export default function ZenPond() {
   const [ripples, setRipples] = useState<Ripple[]>([])
+  const { ligado } = useSom()
+
+  // A água de fundo vive junto com o lago: sai de cena ao trocar de tela ou ao
+  // desligar o som, sem ficar tocando por trás do resto do app.
+  useEffect(() => {
+    if (!ligado) return
+    iniciarAmbiente()
+    return () => pararAmbiente()
+  }, [ligado])
 
   const tocar = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect()
     const id = generateId()
-    setRipples((prev) => [
-      ...prev.slice(-14),
-      { id, x: e.clientX - rect.left, y: e.clientY - rect.top },
-    ])
+    const y = e.clientY - rect.top
+    gota(rect.height > 0 ? y / rect.height : 0.5)
+    setRipples((prev) => [...prev.slice(-14), { id, x: e.clientX - rect.left, y }])
     setTimeout(() => setRipples((prev) => prev.filter((r) => r.id !== id)), 2600)
   }
 
