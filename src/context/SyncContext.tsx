@@ -54,16 +54,33 @@ const mensagemDoErro = (e: unknown) =>
   e instanceof Error ? e.message : 'Não deu para sincronizar agora.'
 
 export function SyncProvider({ children }: { children: ReactNode }) {
+  // Se a URL do secret estiver mal colada (sem "https://", espaço, aspas
+  // grudadas etc.), createClient lança na hora, síncrono — e como este é o
+  // provider mais externo do app, sem o try/catch a árvore inteira do React
+  // falha ao renderizar e sobra só o fundo escuro do CSS: tela preta, sem
+  // nenhum aviso. A sincronização é uma camada por cima, nunca pode ser
+  // capaz de derrubar o app base.
   const cliente = useMemo<SupabaseClient | null>(() => {
     if (!SYNC_CONFIGURADO) return null
-    return createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!, {
-      auth: { persistSession: true, autoRefreshToken: true },
-    })
+    try {
+      return createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!, {
+        auth: { persistSession: true, autoRefreshToken: true },
+      })
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error('VITE_SUPABASE_URL ou VITE_SUPABASE_ANON_KEY inválidas:', e)
+      return null
+    }
   }, [])
+
+  // Só "disponível" de verdade se as chaves existirem E o cliente tiver sido
+  // criado com sucesso — uma URL mal configurada não deve fingir que dá pra
+  // conectar.
+  const disponivel = SYNC_CONFIGURADO && cliente !== null
 
   const [casalId, setCasalId] = useState<string | null>(null)
   const [email, setEmail] = useState<string | null>(null)
-  const [estado, setEstado] = useState<EstadoConexao>(SYNC_CONFIGURADO ? 'deslogado' : 'desligado')
+  const [estado, setEstado] = useState<EstadoConexao>(disponivel ? 'deslogado' : 'desligado')
   const [erro, setErro] = useState<string | null>(null)
   const [ultimaSync, setUltimaSync] = useState<string | null>(null)
   const [pendentes, setPendentes] = useState(0)
@@ -247,7 +264,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   return (
     <SyncContext.Provider
       value={{
-        disponivel: SYNC_CONFIGURADO,
+        disponivel,
         estado,
         erro,
         email,
