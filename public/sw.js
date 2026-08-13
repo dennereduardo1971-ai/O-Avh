@@ -11,8 +11,12 @@
  * que no GitHub Pages é /O-Avh/ e em dev é /.
  */
 
-// Suba a versão para invalidar o cache antigo depois de um deploy.
-const VERSAO = 'cantinho-v1'
+// Muda sozinha a cada deploy (o workflow substitui __BUILD_ID__ pelo hash do
+// commit). Isso não é enfeite: sem isso, um navegador que caísse no cache
+// offline ficaria preso pra sempre na página de um deploy antigo, que
+// referencia um arquivo .js que o deploy seguinte já apagou — tela em branco.
+// Bumping manual falhou uma vez (a versão nunca subiu); agora é automático.
+const VERSAO = 'cantinho-__BUILD_ID__'
 
 const escopo = new URL(self.registration.scope)
 const INDEX = new URL('index.html', escopo).pathname

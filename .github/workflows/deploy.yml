@@ -37,6 +37,10 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_VAPID_PUBLIC_KEY: ${{ secrets.VITE_VAPID_PUBLIC_KEY }}
+      # Dá ao cache do service worker uma versão nova a cada deploy — senão um
+      # navegador que caia no modo offline fica preso na página de um deploy
+      # antigo, apontando para um .js que o deploy seguinte já apagou.
+      - run: sed -i "s/__BUILD_ID__/${GITHUB_SHA::7}/" dist/sw.js
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
