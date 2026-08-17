@@ -314,6 +314,36 @@ reaparecer, o Source voltou para branch.
 
 ---
 
+## Agentes e skills do projeto
+
+Em `.claude/agents/` e `.claude/skills/`. Use em vez de reinventar a rotina
+toda vez — cada um encapsula uma dor que já aconteceu neste repo.
+
+**Agentes** (`Agent` tool, `subagent_type`):
+
+| Agente | Quando |
+|---|---|
+| `visual-designer` | Aparência, animação, consistência visual — revisa **e já aplica** o ajuste. |
+| `systemic-architect` | Saúde arquitetural ao crescer: feature nova grande, dúvida de "isso vai onde", dívida técnica. |
+| `quality-inspector` | Portão antes de commit/push: lint, build, teste de navegador quando cabe, varredura contra as armadilhas abaixo. |
+| `bug-hunter` | Lógica que compila mas se comporta errado — corrida, closure velha, ordem de efeito, merge. |
+| `sync-guardian` | Qualquer mudança em `lib/sync/` ou `esquema.sql` — o único lugar onde bug vira perda de dado real. |
+
+**Skills** (`Skill` tool, `/nome`):
+
+| Skill | Para quê |
+|---|---|
+| `deploy-check` | Confirma que o GitHub Pages publicou certo e que o workflow concorrente não voltou. |
+| `browser-test` | Monta/desmonta a bancada Playwright, com as técnicas de espionar Web Audio já resolvidas. |
+| `new-feature` | Esqueleto de área nova: pasta, rota, design system, XP, sincronização opcional. |
+
+Todos os cinco agentes e as três skills partem do princípio de que este
+`CLAUDE.md` já foi lido — é a fonte da verdade que eles citam, não algo que
+substituem. Ao adicionar uma armadilha nova à lista abaixo, considere se
+algum desses arquivos também precisa saber dela.
+
+---
+
 ## Testando no navegador (aprendido na marra)
 
 Playwright não está no `package.json`; instale sob demanda com
