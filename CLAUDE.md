@@ -445,11 +445,61 @@ verificado pelo usuário, não por mim: eu não tenho como abrir o site publicad
 nem inspecionar o Supabase dele a partir daqui (ver a limitação de rede logo
 abaixo).
 
-**Notificações push (passos 5–7 do `CONFIGURACAO.md`) ainda não foram
-confirmadas** — exigem gerar VAPID, publicar a Edge Function e ligar o webhook,
-passos que não foram mencionados como concluídos. Se o usuário pedir para
-mexer em algo de push, pergunte se esses passos já foram feitos antes de supor
-que sim.
+**Notificações push (passos 5–7 do `CONFIGURACAO.md`): parte automatizada por
+uma sessão com acesso ao Supabase MCP, falta só colar 5 segredos.** Projeto
+Supabase é o **Lunaria** (`project_id: rtxntwazkfyykujkmaxs`). O que já está
+feito, direto pela API, sem o usuário abrir o dashboard:
+
+- **Passo 5** (VAPID): par gerado com `scripts/gerar-vapid.mjs`.
+- **Passo 6** (Edge Function): `notificar` publicada (`deploy_edge_function`,
+  `verify_jwt: false` — a função faz a própria autenticação pelo cabeçalho
+  `x-segredo`, então exigir JWT do Supabase por cima rejeitaria a chamada do
+  gatilho antes dela nem rodar).
+- **Passo 7** (avisar a função quando `itens` muda): em vez do Database
+  Webhook pelo dashboard, criado por SQL — `pg_net` habilitada e um trigger
+  (`avisar_o_outro`, migração `avisar_o_outro_via_webhook`) chamando
+  `net.http_post` com o mesmo formato `{ type, record, old_record }` que o
+  webhook do dashboard geraria. `get_advisors` pegou a função exposta como RPC
+  pública (`SECURITY DEFINER` em `public` vira `/rest/v1/rpc/...`) — corrigido
+  revogando `EXECUTE` de `anon`/`authenticated` (migração
+  `endurece_avisar_o_outro`); gatilho continua disparando normal, isso não
+  depende de GRANT na função. **Fica um aviso sem correção possível**:
+  `pg_net` não aceita `ALTER EXTENSION ... SET SCHEMA` (Postgres recusa), então
+  o lint "Extension in Public" persiste — não é descuido, é limitação da
+  extensão.
+- Testado de ponta a ponta até onde dava sem os segredos: um
+  `net.http_post` manual pro endpoint da função voltou **401 "não
+  autorizado"** — prova que o caminho gatilho → `pg_net` → Edge Function está
+  de pé; o 401 é exatamente o esperado, porque a função checa
+  `SEGREDO_WEBHOOK` e esse segredo só existe em texto aqui, não como variável
+  de ambiente da função ainda (ver abaixo).
+
+**O que nenhuma ferramenta de API alcança — só o usuário pelo dashboard/GitHub,
+mesmo tendo o Supabase MCP conectado:**
+
+| Onde | O quê |
+|---|---|
+| GitHub → *Settings → Secrets and variables → Actions* | `VITE_VAPID_PUBLIC_KEY` = `BMIx6oGrnSAFpZyEiBcXcmvt08O3rj3-4yQUc6xQrlKHqWsIN_PUNvTzOMmKx8bi-EMe1ftyKKa-SoTVsxV69fY` |
+| Supabase → *Edge Functions → notificar → Secrets* | `VAPID_PUBLIC_KEY` (a mesma acima) |
+| — | `VAPID_PRIVATE_KEY` = `RBTQ2WmVYofimw7gCApFAKLVp55kgZWADRFmRwspeVo` |
+| — | `VAPID_SUBJECT` = `mailto:` + e-mail do usuário |
+| — | `SEGREDO_WEBHOOK` = `cY6NFITVAlJERwCINsO48bj5wJxNx0Xy` (**tem que ser exatamente este** — já está hardcoded no trigger `avisar_o_outro`; trocar um lado sem o outro quebra a autenticação) |
+
+Motivo: segredo de Edge Function no Supabase é um cofre próprio (não é a
+extensão `vault` do Postgres, essa o `execute_sql` alcançaria) — só a CLI
+autenticada ou o dashboard escrevem nele. Nenhuma ferramenta MCP disponível
+aqui expõe isso, e é assim de propósito: é justamente a categoria de segredo
+que não deveria ser gravável por uma API que um agente chama.
+
+Depois de colar os 5 valores, falta só rodar o deploy do GitHub Pages de novo
+(o `VITE_VAPID_PUBLIC_KEY` só entra num build feito depois de o secret
+existir) e o passo 8 em cada celular (instalar + ligar avisos).
+
+> **Sessões futuras: cheque `ToolSearch` por `mcp__Supabase__*` antes de supor
+> que só dá para orientar o usuário a colar SQL manualmente.** Esta sessão
+> tinha o conector ligado e fez o passo 6 e a maior parte do 7 direto pela
+> API — só descobriu isso testando, porque a disponibilidade do conector varia
+> entre sessões.
 
 > Os testes de modo local e de mescla foram feitos com bancada temporária
 > (Playwright sob demanda + um bundle esbuild com `localStorage` de mentira) e

@@ -142,6 +142,12 @@ Adicione a pública como mais um secret no GitHub (mesmo caminho do passo 4):
 
 ---
 
+> **Se uma sessão do Claude tinha o conector do Supabase ligado, os passos 6 e
+> a criação do gatilho do passo 7 já podem estar feitos** — confira a seção
+> "Notificações push" em `CLAUDE.md` antes de repetir na mão. O que nenhuma
+> API alcança são os *secrets* (aqui embaixo e no passo 6) e o secret do
+> GitHub do passo 5: esses só o dashboard/GitHub escrevem.
+
 ## Passo 6 — Publicar a função que envia os avisos
 
 Essa função é quem decide o que merece apitar e manda o aviso para o **outro**
