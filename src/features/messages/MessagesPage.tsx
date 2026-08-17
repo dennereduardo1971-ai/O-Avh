@@ -61,7 +61,16 @@ export default function MessagesPage() {
 
   // Vindo de uma notificação: "❤️ Retribuir" já curte o recadinho certo, e
   // "💌 Agradecer" chega com o texto pronto no compositor — o casal só revisa
-  // e manda, sem digitar do zero. Roda uma vez só, ao abrir por esse link.
+  // e manda, sem digitar do zero.
+  //
+  // A dependência é a string da query, não `[]`: quando o Recadinhos já está
+  // aberto e chega uma nova notificação, o service worker só troca o hash da
+  // janela existente (`WindowClient.navigate`) — como o caminho `/mensagens`
+  // não muda, o React Router não remonta a página, então um efeito só-no-mount
+  // nunca veria o parâmetro novo. `searchParams` em si é um objeto novo a cada
+  // render (reagir a ele reprocessaria em toda digitação); a string é que só
+  // muda quando a query muda de verdade — inclusive volta a `''` depois do
+  // `setSearchParams` abaixo, então o processamento não repete sozinho.
   useEffect(() => {
     const curtirId = searchParams.get('curtir')
     const rascunho = searchParams.get('rascunho')
@@ -70,8 +79,8 @@ export default function MessagesPage() {
     if (curtirId) curtir(curtirId)
     if (rascunho) setText(rascunho)
     setSearchParams({}, { replace: true })
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- só na primeira renderização, ao chegar pela notificação
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- só quando a query muda; `curtir`/`setSearchParams` são estáveis o bastante aqui
+  }, [searchParams.toString()])
 
   const destinatario = profile.names[otherOf(profile.active)]
 
