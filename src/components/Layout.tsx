@@ -1,7 +1,9 @@
+import { useEffect } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import AmbientBackground from './AmbientBackground'
 import PlayerHUD from './PlayerHUD'
+import { zerarCracha } from '../lib/pwa'
 import { GLOW_HEX, type GlowTone } from './ui/Panel'
 
 interface NavEntry {
@@ -83,6 +85,18 @@ function NavRow({ entry }: { entry: NavEntry }) {
 
 export default function Layout() {
   const location = useLocation()
+
+  // O crachá do ícone (Badging API) marca "tem coisa esperando". Abrir o app
+  // — por notificação, pelo ícone, ou só voltando o foco pra aba — é o sinal
+  // de que já foi visto, então zera aqui, no shell que está sempre montado.
+  useEffect(() => {
+    zerarCracha()
+    const aoFicarVisivel = () => {
+      if (document.visibilityState === 'visible') zerarCracha()
+    }
+    document.addEventListener('visibilitychange', aoFicarVisivel)
+    return () => document.removeEventListener('visibilitychange', aoFicarVisivel)
+  }, [])
 
   return (
     <div className="relative min-h-screen">

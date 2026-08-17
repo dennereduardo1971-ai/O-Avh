@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { generateId } from '../../lib/storage'
 import { useSyncedArea } from '../../lib/sync/hooks'
@@ -27,6 +28,7 @@ export default function MessagesPage() {
   const [messages, setMessages] = useSyncedArea<CuteMessage[]>('mensagens', [])
   const [text, setText] = useState('')
   const [pulseId, setPulseId] = useState<string | null>(null)
+  const [searchParams, setSearchParams] = useSearchParams()
 
   const enviar = () => {
     const trimmed = text.trim()
@@ -45,17 +47,31 @@ export default function MessagesPage() {
     trigger({ xp: 10, xpLabel: 'Recadinho enviado', xpIcon: '💌', countKey: 'messages' })
   }
 
-  const curtir = (id: string, e: React.MouseEvent) => {
+  const curtir = (id: string, origem: { x: number; y: number } = { x: 0.5, y: 0.42 }) => {
     setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, hearts: m.hearts + 1 } : m)))
     setPulseId(id)
     setTimeout(() => setPulseId(null), 500)
-    confettiPop({ x: e.clientX / window.innerWidth, y: e.clientY / window.innerHeight })
+    confettiPop(origem)
     trigger({ xp: 2, xpLabel: 'Curtida enviada', xpIcon: '❤️', countKey: 'hearts' })
   }
 
   const remover = (id: string) => setMessages((prev) => prev.filter((m) => m.id !== id))
 
   const usarSugestao = () => setText(SUGESTOES[Math.floor(Math.random() * SUGESTOES.length)])
+
+  // Vindo de uma notificação: "❤️ Retribuir" já curte o recadinho certo, e
+  // "💌 Agradecer" chega com o texto pronto no compositor — o casal só revisa
+  // e manda, sem digitar do zero. Roda uma vez só, ao abrir por esse link.
+  useEffect(() => {
+    const curtirId = searchParams.get('curtir')
+    const rascunho = searchParams.get('rascunho')
+    if (!curtirId && !rascunho) return
+
+    if (curtirId) curtir(curtirId)
+    if (rascunho) setText(rascunho)
+    setSearchParams({}, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- só na primeira renderização, ao chegar pela notificação
+  }, [])
 
   const destinatario = profile.names[otherOf(profile.active)]
 
@@ -134,7 +150,9 @@ export default function MessagesPage() {
                       <motion.button
                         whileTap={{ scale: 1.35 }}
                         animate={pulseId === m.id ? { scale: [1, 1.45, 1] } : {}}
-                        onClick={(e) => curtir(m.id, e)}
+                        onClick={(e) =>
+                          curtir(m.id, { x: e.clientX / window.innerWidth, y: e.clientY / window.innerHeight })
+                        }
                         className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 transition-colors hover:border-blush-400/40 hover:text-blush-300"
                       >
                         ❤️ {m.hearts}

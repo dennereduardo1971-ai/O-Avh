@@ -32,6 +32,12 @@ interface Aviso {
   corpo: string
   rota: string
   tag: string
+  /** id do item, só quando a ação rápida precisa dele (ex.: curtir o recadinho certo). */
+  itemId?: string
+  /** Ação extra oferecida na notificação, além de "Ver". */
+  acaoRapida?: 'curtir' | 'rascunho'
+  /** Texto pronto para pré-preencher o compositor de recadinho, quando `acaoRapida` é 'rascunho'. */
+  rascunho?: string
 }
 
 const dinheiro = (valor: unknown) =>
@@ -67,6 +73,9 @@ function montarAviso(
         corpo: autor ? `${autor} deixou algo carinhoso pra você.` : 'Tem carinho novo esperando.',
         rota: '/mensagens',
         tag: 'recadinho',
+        itemId: linha.item_id,
+        // Retribuir com um ❤️ direto da notificação, sem precisar digitar nada.
+        acaoRapida: 'curtir',
       }
     }
 
@@ -78,6 +87,12 @@ function montarAviso(
         corpo: titulo ? `“${titulo}” saiu da lista.` : 'Mais uma missão fora da lista.',
         rota: '/tarefas',
         tag: 'missao',
+        // "Agradecer" leva ao Recadinhos com um obrigado já escrito, pronto
+        // pra revisar e mandar — um empurrãozinho, não um envio automático.
+        acaoRapida: 'rascunho',
+        rascunho: titulo
+          ? `Vi que você deu conta de “${titulo}” — muito obrigado(a)! 💪`
+          : 'Vi que você riscou mais uma missão da lista — muito obrigado(a)! 💪',
       }
     }
 
@@ -101,6 +116,10 @@ function montarAviso(
           corpo: titulo ? `“${titulo}” — feito!` : 'Mais uma aventura no mapa de vocês.',
           rota: '/lazer',
           tag: 'aventura',
+          acaoRapida: 'rascunho',
+          rascunho: titulo
+            ? `Foi tão bom viver “${titulo}” com você! ❤️`
+            : 'Foi tão bom viver isso com você! ❤️',
         }
       }
       if (tipo !== 'INSERT') return null

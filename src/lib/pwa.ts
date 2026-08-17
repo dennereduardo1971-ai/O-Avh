@@ -75,6 +75,20 @@ export function useInstalacao() {
 }
 
 /**
+ * Zera o número no ícone do app (Badging API) — o sinal de "chegou algo" já
+ * foi visto assim que o casal abre o app, seja clicando na notificação, seja
+ * só voltando pro ícone na tela de início.
+ *
+ * Best-effort de propósito: `clearAppBadge` não existe em todo navegador
+ * (iOS só a partir do 16.4, com o app instalado), e a ausência dele não pode
+ * quebrar nada — o resto do app funciona igual sem crachá nenhum.
+ */
+export function zerarCracha() {
+  const nav = navigator as Navigator & { clearAppBadge?: () => Promise<void> }
+  nav.clearAppBadge?.().catch(() => undefined)
+}
+
+/**
  * Registra o service worker. Sem ele não há cache offline nem push.
  *
  * `import.meta.env.BASE_URL` já vem com o base do Vite ('/' em dev, '/O-Avh/'

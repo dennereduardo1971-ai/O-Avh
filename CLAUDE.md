@@ -263,6 +263,38 @@ está em `tocarAmostra(nome, taxa, ganho)` e nos ramps de `iniciarAmbiente` /
   não avisa o aparelho que originou a escrita (por isso o `dispositivo` na
   linha) nem as marcadas como `silencioso`.
 
+### Notificação rica, não só texto puro
+
+A `notificar` monta um `Aviso` (`titulo`/`corpo`/`rota`/`tag` + opcionalmente
+`itemId`/`acaoRapida`/`rascunho`) e o `sw.js` decide a apresentação em cima
+disso — a Edge Function nunca manda HTML/UI pronta, só os dados.
+
+- **Vibração e agrupamento são por `tag`**, não por evento individual. Antes de
+  mostrar, o `sw.js` chama `getNotifications({tag})`: se já existe um aviso
+  daquela área ainda não visto, os dois viram um só — "3 recadinhos novos" em
+  vez de empilhar. A contagem viaja escondida em `data.contagem` de uma
+  notificação para a próxima; zera sozinha porque some da lista assim que o
+  casal vê ou descarta.
+- **Ações rápidas dependem de `acaoRapida`**: `'curtir'` (recadinho) abre em
+  `#/mensagens?curtir=<id>` e já dá o ❤️ na hora; `'rascunho'` (missão
+  concluída, aventura vivida) abre em `#/mensagens?rascunho=<texto>` com um
+  agradecimento pronto no compositor — o casal revisa e manda, nunca é enviado
+  sozinho. Quem lê esses parâmetros e limpa a URL depois é o `MessagesPage`,
+  num efeito que roda uma vez só ao montar.
+- **O crachá do ícone (Badging API) conta notificações abertas**, não itens:
+  `self.registration.getNotifications().length` depois de mostrar cada aviso,
+  zerado também em `notificationclose` (descartar sem tocar também é "visto").
+  É `self.navigator.setAppBadge`/`clearAppBadge` — existe tanto em `Window`
+  quanto em `ServiceWorkerGlobalScope`, então dá pra chamar dos dois lados:
+  o `sw.js` atualiza ao empurrar/fechar um aviso, e `Layout.tsx` zera ao montar
+  e a cada `visibilitychange` para "visible", cobrindo quem abre pelo ícone em
+  vez de tocar na notificação. Best-effort nos dois lugares — sem
+  `setAppBadge`/`clearAppBadge` (a maioria do desktop, iOS < 16.4) o app segue
+  igual, só sem o número.
+- Novo contador/ação nesse fluxo entra em três lugares, não um: o `Aviso` da
+  Edge Function, a leitura em `sw.js` (`push`/`notificationclick`), e — se abrir
+  o compositor de recadinho — o efeito de `MessagesPage` que lê a query string.
+
 ---
 
 ## Armadilhas já pagas (não reintroduzir)
