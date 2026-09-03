@@ -4,9 +4,9 @@ import type { ReactNode } from 'react'
 export type GlowTone = 'blush' | 'iris' | 'mint' | 'gold' | 'none'
 
 export const GLOW_HEX: Record<Exclude<GlowTone, 'none'>, string> = {
-  blush: '#ff7da3',
-  iris: '#a78bfa',
-  mint: '#5eead4',
+  blush: '#ff6fa0',
+  iris: '#a879fa',
+  mint: '#34e8c4',
   gold: '#fbbf24',
 }
 
