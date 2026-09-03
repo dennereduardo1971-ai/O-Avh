@@ -8,6 +8,7 @@ import { confettiPop } from '../../lib/confetti'
 import Panel from '../../components/ui/Panel'
 import GameButton from '../../components/ui/GameButton'
 import SectionTitle from '../../components/ui/SectionTitle'
+import ondaMissoes from '../../assets/ilustracoes/onda-missoes.png'
 import type { AssignedTo, DailyTask } from './types'
 
 export default function TasksPage() {
@@ -60,8 +61,14 @@ export default function TasksPage() {
     <div>
       <SectionTitle icon="⚔️" title="Missões" subtitle="O que precisa ser feito hoje." />
 
-      <Panel glow="iris" className="mb-4 p-5">
-        <div className="mb-2.5 flex items-center justify-between">
+      <Panel glow="iris" className="relative isolate mb-4 overflow-hidden p-5">
+        <img
+          src={ondaMissoes}
+          alt=""
+          aria-hidden
+          className="pointer-events-none absolute -top-8 -right-8 -z-10 h-32 w-32 opacity-20 select-none animate-[spin_60s_linear_infinite]"
+        />
+        <div className="relative z-10 mb-2.5 flex items-center justify-between">
           <p className="hud-label">Progresso do dia</p>
           <motion.span
             key={progresso}
@@ -72,7 +79,7 @@ export default function TasksPage() {
             {progresso}%
           </motion.span>
         </div>
-        <div className="h-3 overflow-hidden rounded-full border border-white/8 bg-night-950/70">
+        <div className="relative z-10 h-3 overflow-hidden rounded-full border border-white/8 bg-night-950/70">
           <motion.div
             className="relative h-full rounded-full bg-gradient-to-r from-iris-500 to-mint-400"
             initial={{ width: 0 }}
@@ -88,12 +95,12 @@ export default function TasksPage() {
           <motion.p
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mt-3 text-sm font-bold text-mint-300"
+            className="relative z-10 mt-3 text-sm font-bold text-mint-300"
           >
             🎉 Tudo concluído por hoje. Vão descansar!
           </motion.p>
         )}
-        <GameButton onClick={resetarDia} variant="ghost" size="sm" className="mt-3">
+        <GameButton onClick={resetarDia} variant="ghost" size="sm" className="relative z-10 mt-3">
           🔄 Recomeçar o dia
         </GameButton>
       </Panel>

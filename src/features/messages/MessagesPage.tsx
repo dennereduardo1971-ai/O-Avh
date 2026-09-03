@@ -9,6 +9,8 @@ import { confettiPop } from '../../lib/confetti'
 import Panel from '../../components/ui/Panel'
 import GameButton from '../../components/ui/GameButton'
 import SectionTitle from '../../components/ui/SectionTitle'
+import CapaIlustrada from '../../components/ui/CapaIlustrada'
+import petalasRecadinhos from '../../assets/ilustracoes/petalas-recadinhos.jpg'
 import type { CuteMessage } from './types'
 
 const SUGESTOES = [
@@ -91,6 +93,8 @@ export default function MessagesPage() {
         title="Recadinhos"
         subtitle={`Deixe algo carinhoso para ${destinatario}.`}
       />
+
+      <CapaIlustrada src={petalasRecadinhos} />
 
       <Panel glow="blush" className="mb-7 p-5">
         <textarea

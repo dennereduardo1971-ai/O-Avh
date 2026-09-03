@@ -6,6 +6,7 @@ import { confettiBurst, confettiPop } from '../../lib/confetti'
 import Panel from '../../components/ui/Panel'
 import GameButton from '../../components/ui/GameButton'
 import SectionTitle from '../../components/ui/SectionTitle'
+import impactoArcade from '../../assets/ilustracoes/impacto-arcade.jpg'
 import { PERGUNTAS_DO_DIA } from './questions'
 
 function sorteiaPergunta(atual: string) {
@@ -141,7 +142,24 @@ export default function FunPage() {
         </Panel>
 
         {/* Roleta */}
-        <Panel glow="blush" className="p-5">
+        <Panel glow="blush" className="relative overflow-hidden p-5">
+          {/* Fagulha de impacto no instante em que o sorteio pousa — some
+              rápido, então não atrapalha ler o resultado. */}
+          <AnimatePresence>
+            {sorteado && (
+              <motion.img
+                key={sorteado}
+                src={impactoArcade}
+                alt=""
+                aria-hidden
+                initial={{ opacity: 0.85, scale: 0.3 }}
+                animate={{ opacity: 0, scale: 1.5 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.7, ease: 'easeOut' }}
+                className="pointer-events-none absolute inset-0 m-auto h-48 w-48 mix-blend-screen select-none"
+              />
+            )}
+          </AnimatePresence>
           <p className="hud-label mb-1">Decisões</p>
           <h2 className="mb-1 text-lg font-bold text-parch">Roleta</h2>
           <p className="mb-3 text-xs text-parch-faint">Um item por linha.</p>

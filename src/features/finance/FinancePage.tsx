@@ -8,6 +8,8 @@ import AnimatedNumber from '../../components/AnimatedNumber'
 import Panel from '../../components/ui/Panel'
 import GameButton from '../../components/ui/GameButton'
 import SectionTitle from '../../components/ui/SectionTitle'
+import MotivoGlow from '../../components/ui/MotivoGlow'
+import seloTesouro from '../../assets/ilustracoes/selo-tesouro.jpg'
 import { CATEGORIAS, type PaidBy, type Transaction, type TransactionType } from './types'
 
 const formatBRL = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -92,9 +94,13 @@ export default function FinancePage() {
       </div>
 
       {/* Quem gastou mais — com barras para leitura imediata */}
-      <Panel glow="iris" className="mb-4 p-5">
-        <p className="hud-label mb-3">Quem gastou mais</p>
-        <div className="flex flex-col gap-2.5">
+      <Panel glow="iris" className="relative isolate mb-4 overflow-hidden p-5">
+        <MotivoGlow
+          src={seloTesouro}
+          className="-top-14 -right-14 -z-10 h-52 w-52 opacity-30 animate-[spin_90s_linear_infinite]"
+        />
+        <p className="relative z-10 hud-label mb-3">Quem gastou mais</p>
+        <div className="relative z-10 flex flex-col gap-2.5">
           {(['p1', 'p2', 'ambos'] as PaidBy[]).map((p) => (
             <div key={p} className="flex items-center gap-3">
               <span className="w-24 shrink-0 truncate text-xs font-semibold text-parch-dim">

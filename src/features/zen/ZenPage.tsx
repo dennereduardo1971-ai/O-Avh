@@ -1,6 +1,8 @@
 import { useCallback } from 'react'
 import Panel from '../../components/ui/Panel'
 import SectionTitle from '../../components/ui/SectionTitle'
+import CapaIlustrada from '../../components/ui/CapaIlustrada'
+import lagoLuarRefugio from '../../assets/ilustracoes/lago-luar-refugio.jpg'
 import { useGame } from '../../context/GameContext'
 import BreathingOrb from './BreathingOrb'
 import BubblePop from './BubblePop'
@@ -30,6 +32,8 @@ export default function ZenPage() {
         subtitle="Um canto sem cobrança. Respire, estoure bolhas, mexa na água."
         right={<SomToggle />}
       />
+
+      <CapaIlustrada src={lagoLuarRefugio} />
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <Panel glow="mint" className="p-6 xl:col-span-2">

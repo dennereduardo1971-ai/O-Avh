@@ -4,6 +4,7 @@ import { ACHIEVEMENTS } from '../../lib/achievements'
 import Panel from '../../components/ui/Panel'
 import SectionTitle from '../../components/ui/SectionTitle'
 import AnimatedNumber from '../../components/AnimatedNumber'
+import molduraTrofeu from '../../assets/ilustracoes/moldura-trofeu.png'
 
 export default function AchievementsPage() {
   const { level, xp, streak, achievements, counts, progress, xpIntoLevel, xpForNext } = useGame()
@@ -18,14 +19,20 @@ export default function AchievementsPage() {
       <Panel glow="gold" className="mb-4 overflow-hidden p-6">
         <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-center">
           <div className="relative shrink-0">
-            <motion.div
-              initial={{ scale: 0.5, rotate: -25 }}
-              animate={{ scale: 1, rotate: 0 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 15 }}
-              className="flex h-24 w-24 items-center justify-center rounded-3xl bg-gradient-to-br from-gold-300 to-gold-500 text-4xl font-black text-night-900 shadow-[0_16px_44px_-12px_rgba(251,191,36,0.95),inset_0_2px_0_rgba(255,255,255,0.6)]"
-            >
-              {level}
-            </motion.div>
+            <div className="relative h-28 w-28">
+              <motion.img
+                src={molduraTrofeu}
+                alt=""
+                aria-hidden
+                initial={{ scale: 0.5, rotate: -25, opacity: 0 }}
+                animate={{ scale: 1, rotate: 0, opacity: 1 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 15 }}
+                className="absolute inset-0 h-full w-full object-contain drop-shadow-[0_14px_30px_rgba(251,191,36,0.55)]"
+              />
+              <span className="absolute inset-0 flex items-center justify-center pb-2 text-3xl font-black text-night-900">
+                {level}
+              </span>
+            </div>
             <span className="absolute -inset-2 -z-10 rounded-3xl bg-gold-400/30 blur-xl" />
             <p className="hud-label mt-2 text-center">nível</p>
           </div>
