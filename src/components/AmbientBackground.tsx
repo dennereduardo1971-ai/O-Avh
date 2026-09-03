@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import fundoUrl from '../assets/animacoes/fundo-app.webm'
 
 type Forma = 'poeira' | 'petala' | 'fagulha'
 
@@ -74,12 +75,27 @@ function desenharParticula(ctx: CanvasRenderingContext2D, p: Particle, twinkle: 
 }
 
 /**
- * Fundo do painel: aurora em CSS (barata) + poeira estelar em canvas.
- * O movimento é lento de propósito — é o "plano de fundo respirando",
- * não um efeito que disputa atenção com o conteúdo.
+ * Fundo do painel: o vídeo do torii ao entardecer, com poeira estelar em
+ * canvas por cima. O vídeo mora aqui — não em cada tela — porque o Layout
+ * nunca remonta ao navegar (armadilha 1 do CLAUDE.md), então ele toca uma
+ * vez só e segue por baixo de tudo, sem reiniciar a cada troca de rota.
  */
 export default function AmbientBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
+
+  // Mesmo tratamento do rio no Lago de ondas: quem pediu menos movimento
+  // vê o quadro parado, porque um <video> não é animação CSS — o corte
+  // global de duração não alcança, precisa pausar à mão.
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video) return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      video.pause()
+    } else {
+      video.play().catch(() => {})
+    }
+  }, [])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -167,13 +183,21 @@ export default function AmbientBackground() {
 
   return (
     <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-night-950">
-      {/* Auroras: manchas de cor muito difusas que dão profundidade ao fundo. */}
-      <div className="absolute -top-1/4 -left-1/4 h-[70vmax] w-[70vmax] rounded-full bg-blush-500/12 blur-[120px] animate-[drift_26s_ease-in-out_infinite_alternate]" />
-      <div className="absolute -bottom-1/3 -right-1/4 h-[65vmax] w-[65vmax] rounded-full bg-iris-500/14 blur-[130px] animate-[drift_34s_ease-in-out_infinite_alternate-reverse]" />
-      <div className="absolute top-1/3 left-1/2 h-[45vmax] w-[45vmax] -translate-x-1/2 rounded-full bg-mint-500/7 blur-[140px] animate-[drift_30s_ease-in-out_infinite_alternate]" />
+      <video
+        ref={videoRef}
+        src={fundoUrl}
+        muted
+        loop
+        playsInline
+        aria-hidden
+        className="absolute inset-0 h-full w-full object-cover opacity-60"
+      />
 
-      {/* Vinheta: escurece as bordas e puxa o olho para o centro do painel. */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_38%,rgba(5,4,13,0.82)_100%)]" />
+      {/* Escurece por cima do vídeo — o conteúdo real (painéis, texto) tem
+          que ganhar de qualquer trecho da cena, inclusive o sol. */}
+      <div className="absolute inset-0 bg-night-950/50" />
+      {/* Vinheta: escurece ainda mais as bordas e puxa o olho para o centro. */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_30%,rgba(5,4,13,0.88)_100%)]" />
 
       <canvas ref={canvasRef} className="absolute inset-0" />
     </div>
