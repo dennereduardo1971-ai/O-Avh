@@ -5,6 +5,7 @@ import { ToastProvider } from './context/ToastContext'
 import { GameProvider } from './context/GameContext'
 import Layout from './components/Layout'
 import DashboardPage from './features/home/DashboardPage'
+import DashboardPrototipo from './features/home/DashboardPrototipo'
 import MessagesPage from './features/messages/MessagesPage'
 import FinancePage from './features/finance/FinancePage'
 import TasksPage from './features/tasks/TasksPage'
@@ -22,6 +23,12 @@ export default function App() {
           <GameProvider>
             <HashRouter>
               <Routes>
+                {/* Protótipo do layout novo — fora do Layout de propósito,
+                    pra comparar lado a lado sem misturar as duas cascas.
+                    Remover esta rota (e o arquivo DashboardPrototipo) quando
+                    o layout novo for aprovado e espalhado pro resto do app,
+                    ou descartado. */}
+                <Route path="prototipo" element={<DashboardPrototipo />} />
                 <Route element={<Layout />}>
                   <Route index element={<DashboardPage />} />
                   <Route path="mensagens" element={<MessagesPage />} />
